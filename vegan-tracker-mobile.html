@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vegan Nutrition Tracker</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #8A9A8E 0%, #6B7C70 100%);
+            min-height: 100vh;
+            padding: 16px 12px 80px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+        }
+        .header h1 { font-size: 1.6em; font-weight: 400; letter-spacing: 0.5px; }
+        .header p { font-size: 0.9em; opacity: 0.9; margin-top: 4px; }
+
+        /* ── BOTTOM TAB BAR (mobile-first) ── */
+        .tab-bar {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: white;
+            display: flex;
+            border-top: 1px solid #e0e0e0;
+            z-index: 100;
+            box-shadow: 0 -2px 12px rgba(0,0,0,0.1);
+        }
+        .tab-bar-btn {
+            flex: 1;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 8px 4px 10px;
+            border: none; background: none;
+            cursor: pointer;
+            color: #999;
+            font-size: 10px;
+            font-family: inherit;
+            min-height: 56px;
+            transition: color 0.2s;
+        }
+        .tab-bar-btn .tab-icon { font-size: 20px; margin-bottom: 3px; }
+        .tab-bar-btn.active { color: #6B7C70; }
+        .tab-bar-btn.active .tab-icon { transform: scale(1.1); }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* ── CARDS ── */
+        .card {
+            background: white;
+            border-radius: 14px;
+            padding: 18px;
+            margin-bottom: 14px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+        }
+        .card h2 { color: #6B7C70; font-size: 1.1em; font-weight: 500; margin-bottom: 14px; }
+        .card h3 { color: #5A6B5E; font-size: 1em; font-weight: 500; margin-bottom: 10px; }
+
+        /* ── DATE SELECTOR ── */
+        .date-selector {
+            display: flex; align-items: center; justify-content: space-between;
+            background: white; padding: 12px 16px;
+            border-radius: 14px; margin-bottom: 14px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+        }
+        .date-selector button {
+            padding: 10px 14px; background: #8A9A8E; color: white;
+            border: none; border-radius: 8px; font-size: 1em;
+            min-width: 44px; min-height: 44px; cursor: pointer;
+        }
+        .current-date { font-size: 0.95em; font-weight: 600; color: #333; text-align: center; flex: 1; padding: 0 8px; }
+
+        /* ── MACRO CARDS ── */
+        .macro-overview {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;
+        }
+        .macro-card {
+            background: linear-gradient(135deg, #8A9A8E, #6B7C70);
+            color: white; padding: 14px 12px;
+            border-radius: 10px; text-align: center;
+        }
+        .macro-card.protein { background: linear-gradient(135deg, #9BAA9E, #7A8B7E); }
+        .macro-card.carbs   { background: linear-gradient(135deg, #A8B5AC, #899A8D); }
+        .macro-card.fat     { background: linear-gradient(135deg, #B5C2B9, #96A79A); }
+        .macro-card .label  { font-size: 0.8em; opacity: 0.9; margin-bottom: 4px; }
+        .macro-card .value  { font-size: 1.6em; font-weight: bold; }
+        .macro-card .target { font-size: 0.75em; opacity: 0.8; margin-top: 3px; }
+        .progress-bar-container { background: rgba(255,255,255,0.3); height: 6px; border-radius: 3px; overflow: hidden; margin-top: 6px; }
+        .progress-bar { height: 100%; background: white; transition: width 0.3s; }
+
+        /* ── MICRO CARDS ── */
+        .micronutrient-item {
+            background: #f8f9fa; padding: 12px 14px;
+            border-radius: 8px; border-left: 4px solid #8A9A8E;
+            margin-bottom: 10px;
+        }
+        .micronutrient-item.warning  { border-left-color: #f39c12; }
+        .micronutrient-item.critical { border-left-color: #e74c3c; }
+        .micronutrient-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .micronutrient-name  { font-weight: 600; color: #333; font-size: 0.95em; }
+        .micronutrient-value { font-weight: bold; color: #8A9A8E; font-size: 0.95em; }
+        .micronutrient-bar   { background: #e0e0e0; height: 6px; border-radius: 3px; overflow: hidden; margin-bottom: 4px; }
+        .micronutrient-fill  { height: 100%; background: #8A9A8E; transition: width 0.3s; }
+        .micronutrient-target { font-size: 0.8em; color: #666; }
+        .micronutrient-sources { margin-top: 8px; padding-top: 8px; border-top: 1px solid #e0e0e0; font-size: 0.78em; color: #666; }
+        .source-item { display: flex; justify-content: space-between; padding: 2px 0; }
+        .source-amount { font-weight: 600; color: #8A9A8E; }
+
+        /* ── SEARCH ── */
+        .search-mode-toggle { display: flex; gap: 8px; margin-bottom: 12px; }
+        .mode-btn {
+            flex: 1; padding: 12px; border: 2px solid #e0e0e0;
+            background: white; border-radius: 8px; cursor: pointer;
+            font-weight: 600; font-size: 0.9em; font-family: inherit;
+            min-height: 44px; transition: all 0.2s;
+        }
+        .mode-btn.active { background: #8A9A8E; color: white; border-color: #8A9A8E; }
+
+        .search-box { display: flex; gap: 8px; margin-bottom: 12px; }
+        .search-box input {
+            flex: 1; padding: 13px 14px;
+            border: 2px solid #e0e0e0; border-radius: 8px;
+            font-size: 16px; /* 16px verhindert Auto-Zoom auf iOS */
+            font-family: inherit;
+        }
+        .search-box input:focus { outline: none; border-color: #8A9A8E; }
+        .search-box button {
+            padding: 13px 18px; background: #8A9A8E; color: white;
+            border: none; border-radius: 8px; font-size: 0.95em;
+            font-weight: 500; cursor: pointer; min-height: 44px;
+            white-space: nowrap; font-family: inherit;
+        }
+
+        .online-search-info {
+            background: #e3f2fd; padding: 10px 12px;
+            border-radius: 8px; margin-bottom: 12px;
+            border-left: 4px solid #2196f3; font-size: 0.85em;
+        }
+
+        /* ── FOOD ITEM ── */
+        .food-item {
+            background: #f8f9fa; padding: 14px;
+            margin-bottom: 10px; border-radius: 10px;
+        }
+        .food-name { font-weight: 600; color: #333; font-size: 1em; margin-bottom: 4px; }
+        .food-nutrients { font-size: 0.82em; color: #666; margin-bottom: 10px; }
+
+        /* ── ADD FOOD ROW — mobile friendly ── */
+        .add-food-row {
+            display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+        }
+        .add-food-row input[type="number"] {
+            width: 70px; padding: 10px 8px;
+            border: 2px solid #e0e0e0; border-radius: 8px;
+            font-size: 16px; text-align: center; font-family: inherit;
+        }
+        .add-food-row select {
+            flex: 1; padding: 10px 8px;
+            border: 2px solid #e0e0e0; border-radius: 8px;
+            font-size: 14px; font-family: inherit;
+            background: white; min-height: 44px;
+        }
+        .add-btn {
+            padding: 10px 16px; background: #8A9A8E; color: white;
+            border: none; border-radius: 8px; font-size: 1em;
+            font-weight: 600; cursor: pointer;
+            min-width: 44px; min-height: 44px; font-family: inherit;
+        }
+        .preview-btn {
+            padding: 10px 14px; background: #e3f2fd; color: #1976d2;
+            border: none; border-radius: 8px; font-size: 0.85em;
+            font-weight: 600; cursor: pointer;
+            min-height: 44px; font-family: inherit; white-space: nowrap;
+        }
+        .food-list { max-height: 60vh; overflow-y: auto; }
+
+        /* ── MEAL LOG ── */
+        .meal-section {
+            margin-bottom: 16px; background: #f8f9fa;
+            padding: 14px; border-radius: 10px;
+        }
+        .meal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .meal-title  { font-size: 1em; font-weight: 600; color: #6B7C70; }
+        .meal-total  { font-size: 0.8em; color: #666; }
+        .logged-food {
+            background: white; padding: 12px;
+            margin-bottom: 8px; border-radius: 8px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .logged-food-info { flex: 1; padding-right: 10px; }
+        .remove-btn {
+            padding: 8px 14px; background: #e74c3c; color: white;
+            border: none; border-radius: 6px; cursor: pointer;
+            font-size: 1em; min-width: 44px; min-height: 44px;
+            font-family: inherit;
+        }
+
+        /* ── STATS ── */
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .stat-card {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white; padding: 16px 12px;
+            border-radius: 10px; text-align: center;
+        }
+        .stat-value { font-size: 2em; font-weight: bold; margin-bottom: 4px; }
+        .stat-label { font-size: 0.8em; opacity: 0.9; }
+
+        /* ── MY FOODS ── */
+        .custom-food-card {
+            background: #f8f9fa; padding: 14px;
+            border-radius: 10px; margin-bottom: 10px;
+            border-left: 4px solid #8A9A8E;
+        }
+        .custom-food-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+        .custom-food-name  { font-weight: 600; font-size: 1em; color: #333; flex: 1; padding-right: 8px; }
+        .custom-food-nutrients { font-size: 0.85em; color: #666; }
+        .custom-food-actions { display: flex; gap: 8px; margin-top: 10px; }
+        .action-btn-small {
+            flex: 1; padding: 10px; border: none;
+            border-radius: 8px; font-size: 0.85em; font-weight: 600;
+            cursor: pointer; min-height: 44px; font-family: inherit;
+        }
+        .action-btn-small.edit   { background: #3498db; color: white; }
+        .action-btn-small.delete { background: #e74c3c; color: white; }
+
+        /* ── SETTINGS ── */
+        .settings-form { display: grid; gap: 16px; }
+        .form-group { display: grid; gap: 6px; }
+        .form-group label { font-weight: 600; color: #333; font-size: 0.9em; }
+        .form-group input, .form-group select {
+            padding: 13px 12px; border: 2px solid #e0e0e0;
+            border-radius: 8px; font-size: 16px; font-family: inherit;
+        }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #8A9A8E; }
+        .save-btn {
+            padding: 15px; background: #8A9A8E; color: white;
+            border: none; border-radius: 10px; font-size: 1em;
+            font-weight: 500; cursor: pointer; font-family: inherit;
+            min-height: 50px; width: 100%;
+        }
+
+        /* ── MODAL ── */
+        .modal {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.6); z-index: 200;
+            align-items: flex-end; justify-content: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: white; border-radius: 20px 20px 0 0;
+            padding: 24px 20px 32px;
+            width: 100%; max-height: 85vh; overflow-y: auto;
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+        .modal-title  { font-size: 1.2em; font-weight: bold; color: #333; }
+        .modal-close  { background: none; border: none; font-size: 1.8em; cursor: pointer; color: #999; min-width: 44px; min-height: 44px; }
+        .nutrient-preview { background: #f8f9fa; padding: 14px; border-radius: 10px; margin-bottom: 14px; }
+        .nutrient-row { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid #e0e0e0; }
+        .nutrient-row:last-child { border-bottom: none; }
+        .nutrient-label { font-weight: 600; color: #666; font-size: 0.9em; }
+        .nutrient-value { color: #333; font-weight: bold; font-size: 0.9em; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+        .modal-btn {
+            flex: 1; padding: 15px; border: none; border-radius: 10px;
+            font-size: 1em; font-weight: 600; cursor: pointer;
+            min-height: 50px; font-family: inherit;
+        }
+        .modal-btn.primary   { background: #8A9A8E; color: white; }
+        .modal-btn.secondary { background: #e0e0e0; color: #333; }
+
+        /* ── BADGES ── */
+        .online-result-badge {
+            display: inline-block; background: #2196f3; color: white;
+            padding: 2px 8px; border-radius: 10px; font-size: 0.75em; margin-left: 6px;
+        }
+        .source-badge {
+            display: inline-block; background: #9c27b0; color: white;
+            padding: 2px 7px; border-radius: 8px; font-size: 0.72em; margin-left: 6px;
+            white-space: nowrap;
+        }
+
+        .empty-state { text-align: center; padding: 30px 20px; color: #999; }
+        .empty-state-icon { font-size: 2.5em; margin-bottom: 12px; }
+
+        .loading-text { text-align: center; padding: 30px; color: #999; font-size: 1.1em; }
+
+        /* Food count info */
+        .food-info-bar {
+            font-size: 0.82em; color: #666; margin-bottom: 12px;
+            padding: 8px 12px; background: #f0f4f1; border-radius: 8px;
+        }
+
+        .danger-btn {
+            padding: 15px; background: #e74c3c; color: white;
+            border: none; border-radius: 10px; font-size: 1em;
+            font-weight: 500; cursor: pointer; font-family: inherit;
+            min-height: 50px; width: 100%; margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌱 Vegan Nutrition Tracker</h1>
+        <p>Deine smarte vegane Ernährungs-App</p>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="tab-dashboard" class="tab-content active">
+        <div class="date-selector">
+            <button onclick="changeDate(-1)">←</button>
+            <span class="current-date" id="currentDate"></span>
+            <button onclick="changeDate(1)">→</button>
+        </div>
+        <div class="card">
+            <h2>Tagesübersicht</h2>
+            <div class="macro-overview">
+                <div class="macro-card">
+                    <div class="label">Kalorien</div>
+                    <div class="value"><span id="caloriesValue">0</span></div>
+                    <div class="target">Ziel: <span id="caloriesTarget">2000</span> kcal</div>
+                    <div class="progress-bar-container"><div class="progress-bar" id="caloriesProgress"></div></div>
+                </div>
+                <div class="macro-card protein">
+                    <div class="label">Protein</div>
+                    <div class="value"><span id="proteinValue">0</span>g</div>
+                    <div class="target">Ziel: <span id="proteinTarget">60</span>g</div>
+                    <div class="progress-bar-container"><div class="progress-bar" id="proteinProgress"></div></div>
+                </div>
+                <div class="macro-card carbs">
+                    <div class="label">Kohlenhydrate</div>
+                    <div class="value"><span id="carbsValue">0</span>g</div>
+                    <div class="target">Ziel: <span id="carbsTarget">250</span>g</div>
+                    <div class="progress-bar-container"><div class="progress-bar" id="carbsProgress"></div></div>
+                </div>
+                <div class="macro-card fat">
+                    <div class="label">Fett</div>
+                    <div class="value"><span id="fatValue">0</span>g</div>
+                    <div class="target">Ziel: <span id="fatTarget">65</span>g</div>
+                    <div class="progress-bar-container"><div class="progress-bar" id="fatProgress"></div></div>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <h2>Wichtige Mikronährstoffe</h2>
+            <div class="micronutrient-item" id="micro-b12">
+                <div class="micronutrient-header">
+                    <span class="micronutrient-name">Vitamin B12</span>
+                    <span class="micronutrient-value"><span id="b12Value">0</span> µg</span>
+                </div>
+                <div class="micronutrient-bar"><div class="micronutrient-fill" id="b12Fill"></div></div>
+                <div class="micronutrient-target">Ziel: 4 µg</div>
+                <div class="micronutrient-sources" id="b12Sources"></div>
+            </div>
+            <div class="micronutrient-item" id="micro-iron">
+                <div class="micronutrient-header">
+                    <span class="micronutrient-name">Eisen</span>
+                    <span class="micronutrient-value"><span id="ironValue">0</span> mg</span>
+                </div>
+                <div class="micronutrient-bar"><div class="micronutrient-fill" id="ironFill"></div></div>
+                <div class="micronutrient-target">Ziel: 14 mg</div>
+                <div class="micronutrient-sources" id="ironSources"></div>
+            </div>
+            <div class="micronutrient-item" id="micro-calcium">
+                <div class="micronutrient-header">
+                    <span class="micronutrient-name">Calcium</span>
+                    <span class="micronutrient-value"><span id="calciumValue">0</span> mg</span>
+                </div>
+                <div class="micronutrient-bar"><div class="micronutrient-fill" id="calciumFill"></div></div>
+                <div class="micronutrient-target">Ziel: 1000 mg</div>
+                <div class="micronutrient-sources" id="calciumSources"></div>
+            </div>
+            <div class="micronutrient-item" id="micro-omega3">
+                <div class="micronutrient-header">
+                    <span class="micronutrient-name">Omega-3</span>
+                    <span class="micronutrient-value"><span id="omega3Value">0</span> mg</span>
+                </div>
+                <div class="micronutrient-bar"><div class="micronutrient-fill" id="omega3Fill"></div></div>
+                <div class="micronutrient-target">Ziel: 250 mg</div>
+                <div class="micronutrient-sources" id="omega3Sources"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAHLZEITEN -->
+    <div id="tab-foodlog" class="tab-content">
+        <div class="card">
+            <h2>Lebensmittel hinzufügen</h2>
+            <div class="food-info-bar">
+                📦 Datenbank: <strong id="foodCount">0</strong> Lebensmittel |
+                ⭐ Meine: <strong id="customFoodCount">0</strong>
+            </div>
+            <div class="search-mode-toggle">
+                <button class="mode-btn active" id="localSearchBtn" onclick="setSearchMode('local')">Lokale Suche</button>
+                <button class="mode-btn" id="onlineSearchBtn" onclick="setSearchMode('online')">🌐 Online</button>
+            </div>
+            <div class="online-search-info" id="onlineSearchInfo" style="display:none;">
+                Sucht in <strong>Open Food Facts</strong> — 2+ Mio. Produkte weltweit.
+            </div>
+            <div class="search-box">
+                <input type="text" id="foodSearch" placeholder="Lebensmittel suchen…" 
+                    onkeydown="if(event.key==='Enter'){searchFood();}">
+                <button onclick="searchFood()">Suchen</button>
+            </div>
+            <div class="food-list" id="foodResults"></div>
+        </div>
+        <div class="card">
+            <h2>Heutige Mahlzeiten</h2>
+            <div id="mealLog"></div>
+        </div>
+    </div>
+
+    <!-- MEINE LEBENSMITTEL -->
+    <div id="tab-myfoods" class="tab-content">
+        <div class="card">
+            <h2>Meine Lebensmittel</h2>
+            <p style="color:#666; font-size:0.9em; margin-bottom:16px;">
+                Aus Online-Suche gespeicherte oder manuell erstellte Lebensmittel.
+            </p>
+            <div id="customFoodsList"></div>
+        </div>
+        <div class="card">
+            <h2>Manuell erstellen</h2>
+            <button class="save-btn" onclick="showCreateFoodModal()">+ Neues Lebensmittel</button>
+        </div>
+    </div>
+
+    <!-- MIKRONÄHRSTOFFE -->
+    <div id="tab-micro" class="tab-content">
+        <div class="card">
+            <h2>Detaillierte Mikronährstoffe</h2>
+            <p style="color:#666; font-size:0.85em; margin-bottom:16px;">Besonders wichtig für vegane Ernährung</p>
+            <div id="detailedMicronutrients"></div>
+        </div>
+    </div>
+
+    <!-- STATISTIKEN -->
+    <div id="tab-stats" class="tab-content">
+        <div class="card">
+            <h2>7-Tage Durchschnitt</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="avgCalories">0</div>
+                    <div class="stat-label">Ø Kalorien/Tag</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg,#e74c3c,#c0392b)">
+                    <div class="stat-value" id="avgProtein">0</div>
+                    <div class="stat-label">Ø Protein/Tag (g)</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg,#8A9A8E,#6B7C70)">
+                    <div class="stat-value" id="avgB12">0</div>
+                    <div class="stat-label">Ø B12/Tag (µg)</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg,#f39c12,#d68910)">
+                    <div class="stat-value" id="avgIron">0</div>
+                    <div class="stat-label">Ø Eisen/Tag (mg)</div>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <h2>Erfolge</h2>
+            <div id="achievements"></div>
+        </div>
+    </div>
+
+    <!-- EINSTELLUNGEN -->
+    <div id="tab-settings" class="tab-content">
+        <div class="card">
+            <h2>Persönliche Ziele</h2>
+            <div class="settings-form">
+                <div class="form-group">
+                    <label>Kalorien/Tag (kcal)</label>
+                    <input type="number" id="dailyCalories" value="2000" inputmode="numeric">
+                </div>
+                <div class="form-group">
+                    <label>Protein/Tag (g)</label>
+                    <input type="number" id="dailyProtein" value="60" inputmode="numeric">
+                </div>
+                <div class="form-group">
+                    <label>Kohlenhydrate/Tag (g)</label>
+                    <input type="number" id="dailyCarbs" value="250" inputmode="numeric">
+                </div>
+                <div class="form-group">
+                    <label>Fett/Tag (g)</label>
+                    <input type="number" id="dailyFat" value="65" inputmode="numeric">
+                </div>
+                <button class="save-btn" onclick="saveSettings()">💾 Speichern</button>
+            </div>
+        </div>
+        <div class="card">
+            <h2>Daten verwalten</h2>
+            <button class="danger-btn" onclick="clearAllData()">⚠️ Alle Daten löschen</button>
+            <p style="color:#999; font-size:0.82em; margin-top:8px;">Diese Aktion kann nicht rückgängig gemacht werden.</p>
+        </div>
+    </div>
+
+    <!-- BOTTOM TAB BAR -->
+    <nav class="tab-bar">
+        <button class="tab-bar-btn active" id="nav-dashboard" onclick="switchTab('dashboard')">
+            <span class="tab-icon">📊</span>Dashboard
+        </button>
+        <button class="tab-bar-btn" id="nav-foodlog" onclick="switchTab('foodlog')">
+            <span class="tab-icon">🍽️</span>Mahlzeiten
+        </button>
+        <button class="tab-bar-btn" id="nav-myfoods" onclick="switchTab('myfoods')">
+            <span class="tab-icon">⭐</span>Meine
+        </button>
+        <button class="tab-bar-btn" id="nav-micro" onclick="switchTab('micro')">
+            <span class="tab-icon">💊</span>Mikro
+        </button>
+        <button class="tab-bar-btn" id="nav-stats" onclick="switchTab('stats')">
+            <span class="tab-icon">📈</span>Stats
+        </button>
+        <button class="tab-bar-btn" id="nav-settings" onclick="switchTab('settings')">
+            <span class="tab-icon">⚙️</span>Einst.
+        </button>
+    </nav>
+
+    <!-- PREVIEW MODAL -->
+    <div id="previewModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="previewTitle">Vorschau</h2>
+                <button class="modal-close" onclick="closePreviewModal()">×</button>
+            </div>
+            <div id="previewContent"></div>
+            <div class="modal-actions">
+                <button class="modal-btn secondary" onclick="closePreviewModal()">Abbrechen</button>
+                <button class="modal-btn primary" onclick="confirmAddFood()">Zu meiner DB</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- EDIT FOOD MODAL -->
+    <div id="editFoodModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="editFoodTitle">Lebensmittel</h2>
+                <button class="modal-close" onclick="closeEditFoodModal()">×</button>
+            </div>
+            <div class="settings-form">
+                <div class="form-group"><label>Name</label><input type="text" id="editFoodName" placeholder="z.B. Bio Hummus"></div>
+                <div class="form-group"><label>Kalorien (kcal/100g)</label><input type="number" id="editCalories" step="0.1" inputmode="decimal"></div>
+                <div class="form-group"><label>Protein (g/100g)</label><input type="number" id="editProtein" step="0.1" inputmode="decimal"></div>
+                <div class="form-group"><label>Kohlenhydrate (g/100g)</label><input type="number" id="editCarbs" step="0.1" inputmode="decimal"></div>
+                <div class="form-group"><label>Fett (g/100g)</label><input type="number" id="editFat" step="0.1" inputmode="decimal"></div>
+                <div class="form-group"><label>Ballaststoffe (g/100g)</label><input type="number" id="editFiber" step="0.1" inputmode="decimal"></div>
+                <div class="form-group"><label>Eisen (mg/100g)</label><input type="number" id="editIron" step="0.1" inputmode="decimal"></div>
+                <div class="form-group"><label>Calcium (mg/100g)</label><input type="number" id="editCalcium" step="0.1" inputmode="decimal"></div>
+                <div class="form-group"><label>Vitamin B12 (µg/100g)</label><input type="number" id="editB12" step="0.01" inputmode="decimal"></div>
+                <div class="form-group"><label>Omega-3 (mg/100g)</label><input type="number" id="editOmega3" step="1" inputmode="decimal"></div>
+                <div class="form-group"><label>Zink (mg/100g)</label><input type="number" id="editZinc" step="0.1" inputmode="decimal"></div>
+                <div class="form-group">
+                    <label>Kategorie</label>
+                    <select id="editCategory">
+                        <option value="custom">Eigenes Lebensmittel</option>
+                        <option value="protein">Proteinquelle</option>
+                        <option value="vegetable">Gemüse</option>
+                        <option value="fruit">Obst</option>
+                        <option value="grain">Getreide</option>
+                        <option value="nuts">Nüsse</option>
+                        <option value="seeds">Samen</option>
+                        <option value="legume">Hülsenfrüchte</option>
+                        <option value="oil">Öl</option>
+                        <option value="alternative">Milchalternative</option>
+                        <option value="snack">Snack</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn secondary" onclick="closeEditFoodModal()">Abbrechen</button>
+                <button class="modal-btn primary" onclick="saveEditedFood()">Speichern</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let appData = {
+    settings: { dailyCalories:2000, dailyProtein:60, dailyCarbs:250, dailyFat:65 },
+    foodLog: {},
+    customFoods: [],
+    currentDate: new Date().toISOString().split('T')[0]
+};
+let searchMode = 'local';
+let previewFood = null;
+let editingFoodIndex = null;
+
+// ─── DATENBANK ────────────────────────────────────────────────────────────────
+const veganFoodDatabase = [
+    { name:"Tofu (fest)", calories:144, protein:15.8, carbs:2.7, fat:8.7, fiber:2.3, iron:2.7, calcium:350, b12:0, omega3:0, zinc:1.5, category:"protein" },
+    { name:"Tempeh", calories:193, protein:18.5, carbs:9.4, fat:10.8, fiber:5.0, iron:2.7, calcium:111, b12:0, omega3:0, zinc:1.8, category:"protein" },
+    { name:"Seitan", calories:370, protein:75.0, carbs:14.0, fat:1.9, fiber:0.6, iron:5.2, calcium:20, b12:0, omega3:0, zinc:2.0, category:"protein" },
+    { name:"Edamame", calories:121, protein:11.9, carbs:8.9, fat:5.2, fiber:5.2, iron:2.3, calcium:63, b12:0, omega3:0, zinc:1.4, category:"protein" },
+    { name:"Linsen (gekocht)", calories:116, protein:9.0, carbs:20.1, fat:0.4, fiber:7.9, iron:3.3, calcium:19, b12:0, omega3:0, zinc:1.3, category:"legume_cooked" },
+    { name:"Rote Linsen (gekocht)", calories:101, protein:7.6, carbs:17.5, fat:0.4, fiber:5.2, iron:2.4, calcium:14, b12:0, omega3:0, zinc:1.1, category:"legume_cooked" },
+    { name:"Kichererbsen (gekocht)", calories:164, protein:8.9, carbs:27.4, fat:2.6, fiber:7.6, iron:2.9, calcium:49, b12:0, omega3:0, zinc:1.5, category:"legume_cooked" },
+    { name:"Schwarze Bohnen (gekocht)", calories:132, protein:8.9, carbs:23.7, fat:0.5, fiber:8.7, iron:2.1, calcium:27, b12:0, omega3:0, zinc:1.2, category:"legume_cooked" },
+    { name:"Kidneybohnen (gekocht)", calories:127, protein:8.7, carbs:22.8, fat:0.5, fiber:6.4, iron:2.6, calcium:28, b12:0, omega3:0, zinc:1.2, category:"legume_cooked" },
+    { name:"Käferbohnen (gekocht)", calories:127, protein:8.7, carbs:22.8, fat:0.5, fiber:6.4, iron:2.9, calcium:55, b12:0, omega3:0, zinc:1.2, category:"legume_cooked" },
+    { name:"Berglinsen (trocken)", calories:353, protein:25.8, carbs:60.1, fat:1.1, fiber:10.7, iron:6.9, calcium:51, b12:0, omega3:0, zinc:3.6, category:"legume_dry" },
+    { name:"Mandeln", calories:579, protein:21.2, carbs:21.6, fat:49.9, fiber:12.5, iron:3.7, calcium:269, b12:0, omega3:0, zinc:3.1, category:"nuts" },
+    { name:"Walnüsse", calories:654, protein:15.2, carbs:13.7, fat:65.2, fiber:6.7, iron:2.9, calcium:98, b12:0, omega3:2570, zinc:3.1, category:"nuts" },
+    { name:"Haselnüsse", calories:628, protein:15.0, carbs:16.7, fat:60.8, fiber:9.7, iron:4.7, calcium:114, b12:0, omega3:90, zinc:2.5, category:"nuts" },
+    { name:"Chiasamen", calories:486, protein:16.5, carbs:42.1, fat:30.7, fiber:34.4, iron:7.7, calcium:631, b12:0, omega3:17830, zinc:4.6, category:"seeds" },
+    { name:"Leinsamen", calories:534, protein:18.3, carbs:28.9, fat:42.2, fiber:27.3, iron:5.7, calcium:255, b12:0, omega3:22813, zinc:4.3, category:"seeds" },
+    { name:"Hanfsamen", calories:553, protein:31.6, carbs:8.7, fat:48.8, fiber:4.0, iron:7.9, calcium:70, b12:0, omega3:8670, zinc:7.9, category:"seeds" },
+    { name:"Sesam", calories:573, protein:17.7, carbs:23.5, fat:49.7, fiber:11.8, iron:14.6, calcium:975, b12:0, omega3:0, zinc:7.8, category:"seeds" },
+    { name:"Kürbiskerne", calories:559, protein:30.2, carbs:10.7, fat:49.0, fiber:8.9, iron:8.8, calcium:46, b12:0, omega3:0, zinc:7.8, category:"seeds" },
+    { name:"Haferflocken", calories:389, protein:16.9, carbs:66.3, fat:6.9, fiber:10.6, iron:4.7, calcium:54, b12:0, omega3:0, zinc:4.0, category:"grain_dry" },
+    { name:"Quinoa (gekocht)", calories:120, protein:4.4, carbs:21.3, fat:1.9, fiber:2.8, iron:1.5, calcium:17, b12:0, omega3:0, zinc:1.1, category:"grain_cooked" },
+    { name:"Vollkornnudeln (gekocht)", calories:124, protein:5.0, carbs:25.6, fat:1.4, fiber:3.9, iron:1.3, calcium:15, b12:0, omega3:0, zinc:1.0, category:"grain_cooked" },
+    { name:"Naturreis (gekocht)", calories:123, protein:2.7, carbs:25.6, fat:1.0, fiber:1.2, iron:0.6, calcium:8, b12:0, omega3:0, zinc:0.7, category:"grain_cooked" },
+    { name:"Spinat (roh)", calories:23, protein:2.9, carbs:3.6, fat:0.4, fiber:2.2, iron:2.7, calcium:99, b12:0, omega3:0, zinc:0.5, category:"vegetable" },
+    { name:"Spinat (gekocht)", calories:23, protein:3.0, carbs:3.8, fat:0.3, fiber:2.4, iron:3.6, calcium:136, b12:0, omega3:0, zinc:0.8, category:"vegetable" },
+    { name:"Brokkoli", calories:34, protein:2.8, carbs:7.0, fat:0.4, fiber:2.6, iron:0.7, calcium:47, b12:0, omega3:0, zinc:0.4, category:"vegetable" },
+    { name:"Grünkohl", calories:49, protein:4.3, carbs:8.8, fat:0.9, fiber:3.6, iron:1.5, calcium:150, b12:0, omega3:180, zinc:0.6, category:"vegetable" },
+    { name:"Karotten", calories:41, protein:0.9, carbs:9.6, fat:0.2, fiber:2.8, iron:0.3, calcium:33, b12:0, omega3:0, zinc:0.2, category:"vegetable" },
+    { name:"Erdäpfel (Kartoffeln)", calories:77, protein:2.0, carbs:17.5, fat:0.1, fiber:2.1, iron:0.8, calcium:12, b12:0, omega3:0, zinc:0.3, category:"vegetable" },
+    { name:"Süßkartoffel (gekocht)", calories:90, protein:2.0, carbs:20.7, fat:0.2, fiber:3.3, iron:0.6, calcium:38, b12:0, omega3:0, zinc:0.3, category:"vegetable" },
+    { name:"Avocado", calories:160, protein:2.0, carbs:8.5, fat:14.7, fiber:6.7, iron:0.6, calcium:12, b12:0, omega3:110, zinc:0.6, category:"vegetable" },
+    { name:"Hokkaido Kürbis", calories:34, protein:1.1, carbs:8.1, fat:0.1, fiber:3.8, iron:0.7, calcium:25, b12:0, omega3:0, zinc:0.3, category:"vegetable" },
+    { name:"Champignons", calories:22, protein:3.1, carbs:3.3, fat:0.3, fiber:1.0, iron:0.5, calcium:3, b12:0.04, omega3:0, zinc:0.5, category:"vegetable" },
+    { name:"Äpfel", calories:52, protein:0.3, carbs:13.8, fat:0.2, fiber:2.4, iron:0.1, calcium:6, b12:0, omega3:0, zinc:0.0, category:"fruit" },
+    { name:"Banane", calories:89, protein:1.1, carbs:22.8, fat:0.3, fiber:2.6, iron:0.3, calcium:5, b12:0, omega3:0, zinc:0.2, category:"fruit" },
+    { name:"Orange", calories:47, protein:0.9, carbs:11.8, fat:0.1, fiber:2.4, iron:0.1, calcium:40, b12:0, omega3:0, zinc:0.1, category:"fruit" },
+    { name:"Beeren (gemischt)", calories:57, protein:0.7, carbs:14.5, fat:0.3, fiber:2.0, iron:0.6, calcium:16, b12:0, omega3:0, zinc:0.1, category:"fruit" },
+    { name:"Mandelmus (100%)", calories:614, protein:21.2, carbs:21.6, fat:53.4, fiber:12.5, iron:3.7, calcium:269, b12:0, omega3:0, zinc:3.1, category:"nut_butter" },
+    { name:"Erdnussmus (100%)", calories:588, protein:25.8, carbs:16.1, fat:49.2, fiber:8.5, iron:2.4, calcium:92, b12:0, omega3:0, zinc:3.3, category:"nut_butter" },
+    { name:"Olivenöl", calories:884, protein:0, carbs:0, fat:100.0, fiber:0, iron:0.4, calcium:1, b12:0, omega3:761, zinc:0, category:"oil" },
+    { name:"Kürbiskernöl", calories:884, protein:0, carbs:0, fat:100.0, fiber:0, iron:0.1, calcium:0, b12:0, omega3:150, zinc:0, category:"oil" },
+    { name:"Leinöl", calories:884, protein:0, carbs:0, fat:100.0, fiber:0, iron:0, calcium:0, b12:0, omega3:53304, zinc:0, category:"oil" },
+    { name:"Sojamilch (angereichert)", calories:54, protein:3.3, carbs:6.3, fat:1.8, fiber:0.6, iron:0.6, calcium:120, b12:0.38, omega3:0, zinc:0.3, category:"alternative" },
+    { name:"Hafermilch", calories:47, protein:1.0, carbs:7.6, fat:1.5, fiber:0.8, iron:0.3, calcium:120, b12:0.38, omega3:0, zinc:0.3, category:"alternative" },
+    { name:"Sojajoghurt", calories:61, protein:4.6, carbs:2.3, fat:3.5, fiber:1.2, iron:0.5, calcium:120, b12:0.25, omega3:0, zinc:0.4, category:"alternative" },
+    { name:"Nährhefe", calories:325, protein:50.0, carbs:38.0, fat:5.0, fiber:27.0, iron:2.1, calcium:30, b12:8.0, omega3:0, zinc:7.8, category:"supplement" },
+    { name:"Dunkle Schokolade (70%)", calories:598, protein:7.8, carbs:45.8, fat:42.6, fiber:10.9, iron:11.9, calcium:73, b12:0, omega3:0, zinc:3.3, category:"snack" },
+    { name:"Hummus", calories:166, protein:7.9, carbs:14.3, fat:9.6, fiber:6.0, iron:2.4, calcium:38, b12:0, omega3:0, zinc:1.8, category:"spread" }
+];
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+function init() {
+    loadData();
+    updateCurrentDate();
+    loadSettings();
+    updateDashboard();
+    updateMealLog();
+    updateDetailedMicronutrients();
+    updateStats();
+    displayFoodDatabase();
+}
+
+function loadData() {
+    try {
+        const saved = localStorage.getItem('veganNutritionData');
+        if (saved) {
+            appData = JSON.parse(saved);
+            if (!Array.isArray(appData.customFoods)) appData.customFoods = [];
+        }
+    } catch(e) { console.warn('loadData error', e); }
+}
+
+function saveData() {
+    try { localStorage.setItem('veganNutritionData', JSON.stringify(appData)); }
+    catch(e) { console.warn('saveData error', e); }
+}
+
+// ─── TAB NAVIGATION ───────────────────────────────────────────────────────────
+function switchTab(name) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-bar-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    document.getElementById('nav-' + name).classList.add('active');
+    if (name === 'stats')   updateStats();
+    if (name === 'myfoods') displayCustomFoods();
+    if (name === 'micro')   updateDetailedMicronutrients();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ─── DATE ─────────────────────────────────────────────────────────────────────
+function changeDate(days) {
+    const d = new Date(appData.currentDate);
+    d.setDate(d.getDate() + days);
+    appData.currentDate = d.toISOString().split('T')[0];
+    updateCurrentDate();
+    updateDashboard();
+    updateMealLog();
+    updateDetailedMicronutrients();
+}
+
+function updateCurrentDate() {
+    const d = new Date(appData.currentDate);
+    document.getElementById('currentDate').textContent =
+        d.toLocaleDateString('de-AT', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+}
+
+// ─── DASHBOARD ────────────────────────────────────────────────────────────────
+function getTotalsForDate(dateKey) {
+    const dayLog = appData.foodLog[dateKey] || { breakfast:[], lunch:[], dinner:[], snacks:[] };
+    const totals = { calories:0,protein:0,carbs:0,fat:0,fiber:0,iron:0,calcium:0,b12:0,omega3:0,zinc:0 };
+    const sources = { iron:[], calcium:[], b12:[], omega3:[] };
+
+    ['breakfast','lunch','dinner','snacks'].forEach(meal => {
+        (dayLog[meal] || []).forEach(item => {
+            const m = item.amount / 100;
+            totals.calories  += (item.food.calories  || 0) * m;
+            totals.protein   += (item.food.protein   || 0) * m;
+            totals.carbs     += (item.food.carbs     || 0) * m;
+            totals.fat       += (item.food.fat       || 0) * m;
+            totals.fiber     += (item.food.fiber     || 0) * m;
+            totals.iron      += (item.food.iron      || 0) * m;
+            totals.calcium   += (item.food.calcium   || 0) * m;
+            totals.b12       += (item.food.b12       || 0) * m;
+            totals.omega3    += (item.food.omega3    || 0) * m;
+            totals.zinc      += (item.food.zinc      || 0) * m;
+            const iv = (item.food.iron || 0) * m;
+            const cv = (item.food.calcium || 0) * m;
+            const bv = (item.food.b12 || 0) * m;
+            const ov = (item.food.omega3 || 0) * m;
+            if (iv > 0.5) sources.iron.push({ name: item.food.name, amount: iv });
+            if (cv > 10)  sources.calcium.push({ name: item.food.name, amount: cv });
+            if (bv > 0.01) sources.b12.push({ name: item.food.name, amount: bv });
+            if (ov > 10)  sources.omega3.push({ name: item.food.name, amount: ov });
+        });
+    });
+    return { totals, sources };
+}
+
+function updateDashboard() {
+    const { totals, sources } = getTotalsForDate(appData.currentDate);
+    document.getElementById('caloriesValue').textContent = Math.round(totals.calories);
+    document.getElementById('proteinValue').textContent  = Math.round(totals.protein);
+    document.getElementById('carbsValue').textContent    = Math.round(totals.carbs);
+    document.getElementById('fatValue').textContent      = Math.round(totals.fat);
+    document.getElementById('caloriesTarget').textContent = appData.settings.dailyCalories;
+    document.getElementById('proteinTarget').textContent  = appData.settings.dailyProtein;
+    document.getElementById('carbsTarget').textContent    = appData.settings.dailyCarbs;
+    document.getElementById('fatTarget').textContent      = appData.settings.dailyFat;
+    setProgress('caloriesProgress', totals.calories, appData.settings.dailyCalories);
+    setProgress('proteinProgress',  totals.protein,  appData.settings.dailyProtein);
+    setProgress('carbsProgress',    totals.carbs,    appData.settings.dailyCarbs);
+    setProgress('fatProgress',      totals.fat,      appData.settings.dailyFat);
+
+    document.getElementById('b12Value').textContent     = totals.b12.toFixed(1);
+    document.getElementById('ironValue').textContent    = totals.iron.toFixed(1);
+    document.getElementById('calciumValue').textContent = Math.round(totals.calcium);
+    document.getElementById('omega3Value').textContent  = Math.round(totals.omega3);
+    setMicro('b12Fill', 'micro-b12', totals.b12, 4);
+    setMicro('ironFill', 'micro-iron', totals.iron, 14);
+    setMicro('calciumFill', 'micro-calcium', totals.calcium, 1000);
+    setMicro('omega3Fill', 'micro-omega3', totals.omega3, 250);
+    showSources('b12Sources', sources.b12, 'µg');
+    showSources('ironSources', sources.iron, 'mg');
+    showSources('calciumSources', sources.calcium, 'mg');
+    showSources('omega3Sources', sources.omega3, 'mg');
+}
+
+function setProgress(id, val, target) {
+    document.getElementById(id).style.width = Math.min(val / target * 100, 100) + '%';
+}
+function setMicro(barId, itemId, val, target) {
+    const pct = Math.min(val / target * 100, 100);
+    document.getElementById(barId).style.width = pct + '%';
+    const el = document.getElementById(itemId);
+    el.classList.remove('warning','critical');
+    if (pct < 50) el.classList.add('critical');
+    else if (pct < 80) el.classList.add('warning');
+}
+function showSources(id, sources, unit) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (!sources.length) { el.innerHTML = '<small style="color:#bbb">Keine Quellen heute</small>'; return; }
+    el.innerHTML = sources.sort((a,b)=>b.amount-a.amount).slice(0,3).map(s =>
+        `<div class="source-item"><span>${s.name}</span><span class="source-amount">${s.amount.toFixed(1)} ${unit}</span></div>`
+    ).join('');
+}
+
+// ─── SEARCH ───────────────────────────────────────────────────────────────────
+function displayFoodDatabase() {
+    document.getElementById('foodCount').textContent = veganFoodDatabase.length;
+    updateCustomFoodCount();
+    const all = [...veganFoodDatabase, ...(appData.customFoods || [])];
+    renderFoodList(all, false);
+}
+
+function setSearchMode(mode) {
+    searchMode = mode;
+    document.getElementById('localSearchBtn').classList.toggle('active', mode === 'local');
+    document.getElementById('onlineSearchBtn').classList.toggle('active', mode === 'online');
+    document.getElementById('onlineSearchInfo').style.display = mode === 'online' ? 'block' : 'none';
+    document.getElementById('foodSearch').value = '';
+    document.getElementById('foodResults').innerHTML = '';
+}
+
+async function searchFood() {
+    const term = document.getElementById('foodSearch').value.toLowerCase().trim();
+    if (!term) { displayFoodDatabase(); return; }
+    if (searchMode === 'local') {
+        const all = [...veganFoodDatabase, ...(appData.customFoods || [])];
+        renderFoodList(all.filter(f => f.name.toLowerCase().includes(term)), false);
+    } else {
+        await searchOnline(term);
+    }
+}
+
+async function searchOnline(term) {
+    document.getElementById('foodResults').innerHTML = '<div class="loading-text">⏳ Suche läuft…</div>';
+    try {
+        const r = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(term)}&json=1&page_size=20&fields=product_name,nutriments,brands,code`);
+        const data = await r.json();
+        if (!data.products?.length) {
+            document.getElementById('foodResults').innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔍</div><p>Keine Ergebnisse</p></div>';
+            return;
+        }
+        const foods = data.products.filter(p => p.nutriments && p.product_name).map(convertOFF).filter(Boolean);
+        renderFoodList(foods, true);
+    } catch {
+        document.getElementById('foodResults').innerHTML = '<div class="empty-state"><div class="empty-state-icon">⚠️</div><p>Fehler bei der Online-Suche</p></div>';
+    }
+}
+
+function convertOFF(p) {
+    const n = p.nutriments;
+    if (!n['energy-kcal_100g'] && !n['energy_100g']) return null;
+    return {
+        name: p.product_name + (p.brands ? ` (${p.brands})` : ''),
+        calories: n['energy-kcal_100g'] || Math.round((n['energy_100g']||0)/4.184)||0,
+        protein: n['proteins_100g']||0, carbs: n['carbohydrates_100g']||0, fat: n['fat_100g']||0,
+        fiber: n['fiber_100g']||0,
+        iron: n['iron_100g'] ? n['iron_100g']*1000 : 0,
+        calcium: n['calcium_100g'] ? n['calcium_100g']*1000 : 0,
+        b12: n['vitamin-b12_100g'] ? n['vitamin-b12_100g']*1000000 : 0,
+        omega3: n['omega-3-fat_100g'] ? n['omega-3-fat_100g']*1000 : 0,
+        zinc: n['zinc_100g'] ? n['zinc_100g']*1000 : 0,
+        category:'custom', source:'open_food_facts', barcode:p.code,
+        dateAdded: new Date().toISOString().split('T')[0]
+    };
+}
+
+// ─── RENDER FOOD LIST — KEY FIX: data attributes statt inline JSON ────────────
+let foodCache = {};  // id → food object
+
+function renderFoodList(foods, isOnline) {
+    foodCache = {};
+    const container = document.getElementById('foodResults');
+    if (!foods?.length) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔍</div><p>Keine Ergebnisse</p></div>';
+        return;
+    }
+    container.innerHTML = foods.map((food, idx) => {
+        const id = 'food_' + idx;
+        foodCache[id] = food;
+        const badge = isOnline ? '<span class="online-result-badge">🌐</span>' : '';
+        const srcBadge = food.source ? '<span class="source-badge">Meine DB</span>' : '';
+        return `
+        <div class="food-item">
+            <div class="food-name">${food.name}${badge}${srcBadge}</div>
+            <div class="food-nutrients">${Math.round(food.calories)} kcal | P: ${food.protein.toFixed(1)}g | K: ${food.carbs.toFixed(1)}g | F: ${food.fat.toFixed(1)}g / 100g</div>
+            <div class="add-food-row">
+                ${isOnline && !appData.customFoods.some(f=>f.name===food.name) ? `<button class="preview-btn" data-foodid="${id}" onclick="handlePreview(this)">👁️ Info</button>` : ''}
+                <input type="number" id="amt_${id}" value="100" min="1" step="10" inputmode="numeric">
+                <span style="font-size:0.85em;color:#666">g</span>
+                <select id="meal_${id}">
+                    <option value="breakfast">Frühstück</option>
+                    <option value="lunch">Mittag</option>
+                    <option value="dinner">Abend</option>
+                    <option value="snacks">Snacks</option>
+                </select>
+                <button class="add-btn" data-foodid="${id}" onclick="handleAddFood(this)">+</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function handlePreview(btn) {
+    const food = foodCache[btn.dataset.foodid];
+    if (food) showPreviewModal(food);
+}
+
+function handleAddFood(btn) {
+    const id = btn.dataset.foodid;
+    const food = foodCache[id];
+    if (!food) return;
+    const amount = parseInt(document.getElementById('amt_' + id).value) || 100;
+    const meal   = document.getElementById('meal_' + id).value;
+    const dateKey = appData.currentDate;
+    if (!appData.foodLog[dateKey]) appData.foodLog[dateKey] = { breakfast:[], lunch:[], dinner:[], snacks:[] };
+    appData.foodLog[dateKey][meal].push({ food, amount, timestamp: new Date().toISOString() });
+    saveData(); updateDashboard(); updateMealLog();
+    btn.textContent = '✓'; btn.style.background = '#6B7C70';
+    setTimeout(() => { btn.textContent = '+'; btn.style.background = '#8A9A8E'; }, 1200);
+}
+
+// ─── PREVIEW MODAL ────────────────────────────────────────────────────────────
+function showPreviewModal(food) {
+    previewFood = food;
+    document.getElementById('previewTitle').textContent = food.name;
+    document.getElementById('previewContent').innerHTML = `
+        <div class="nutrient-preview">
+            ${[
+                ['Kalorien', Math.round(food.calories)+' kcal'],
+                ['Protein',  food.protein.toFixed(1)+' g'],
+                ['Kohlenhydrate', food.carbs.toFixed(1)+' g'],
+                ['Fett',     food.fat.toFixed(1)+' g'],
+                ['Ballaststoffe', food.fiber.toFixed(1)+' g'],
+                ['Eisen',    food.iron.toFixed(1)+' mg'],
+                ['Calcium',  Math.round(food.calcium)+' mg'],
+                ['Vitamin B12', food.b12.toFixed(2)+' µg'],
+                ['Omega-3',  Math.round(food.omega3)+' mg'],
+                ['Zink',     food.zinc.toFixed(1)+' mg'],
+            ].map(([l,v])=>`<div class="nutrient-row"><span class="nutrient-label">${l}</span><span class="nutrient-value">${v}</span></div>`).join('')}
+        </div>
+        <p style="color:#666;font-size:0.85em;margin-top:10px;">💡 Hinzufügen speichert es dauerhaft in deiner DB.</p>
+    `;
+    document.getElementById('previewModal').classList.add('active');
+}
+function closePreviewModal() { document.getElementById('previewModal').classList.remove('active'); previewFood = null; }
+function confirmAddFood() {
+    if (!previewFood) return;
+    if (appData.customFoods.some(f=>f.name===previewFood.name)) { alert('⚠️ Bereits in deiner Datenbank!'); closePreviewModal(); return; }
+    appData.customFoods.push(previewFood); saveData();
+    alert('✅ Hinzugefügt!'); closePreviewModal();
+    updateCustomFoodCount();
+}
+
+// ─── MEAL LOG ─────────────────────────────────────────────────────────────────
+function updateMealLog() {
+    const dateKey = appData.currentDate;
+    const dayLog = appData.foodLog[dateKey] || { breakfast:[], lunch:[], dinner:[], snacks:[] };
+    const names = { breakfast:'🌅 Frühstück', lunch:'☀️ Mittag', dinner:'🌙 Abend', snacks:'🍎 Snacks' };
+    document.getElementById('mealLog').innerHTML = ['breakfast','lunch','dinner','snacks'].map(mk => {
+        const meals = dayLog[mk] || [];
+        let kcal=0, prot=0;
+        meals.forEach(i => { const m=i.amount/100; kcal+=i.food.calories*m; prot+=i.food.protein*m; });
+        return `<div class="meal-section">
+            <div class="meal-header">
+                <span class="meal-title">${names[mk]}</span>
+                <span class="meal-total">${Math.round(kcal)} kcal | ${Math.round(prot)}g P</span>
+            </div>
+            ${!meals.length ? '<p style="color:#bbb;text-align:center;font-size:0.9em;">Noch keine Einträge</p>' :
+            meals.map((item,idx) => `
+                <div class="logged-food">
+                    <div class="logged-food-info">
+                        <strong style="font-size:0.95em">${item.food.name}</strong> — ${item.amount}g<br>
+                        <small style="color:#666">${Math.round(item.food.calories*item.amount/100)} kcal | P:${Math.round(item.food.protein*item.amount/100)}g</small>
+                    </div>
+                    <button class="remove-btn" data-meal="${mk}" data-idx="${idx}" onclick="removeFood(this)">×</button>
+                </div>`).join('')}
+        </div>`;
+    }).join('');
+}
+
+function removeFood(btn) {
+    const meal = btn.dataset.meal;
+    const idx  = parseInt(btn.dataset.idx);
+    appData.foodLog[appData.currentDate][meal].splice(idx,1);
+    saveData(); updateDashboard(); updateMealLog();
+}
+
+// ─── CUSTOM FOODS ─────────────────────────────────────────────────────────────
+function updateCustomFoodCount() {
+    const el = document.getElementById('customFoodCount');
+    if (el) el.textContent = (appData.customFoods||[]).length;
+}
+
+function displayCustomFoods() {
+    const foods = appData.customFoods || [];
+    const container = document.getElementById('customFoodsList');
+    if (!foods.length) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📚</div><p>Noch keine eigenen Lebensmittel</p><p style="font-size:0.85em;color:#aaa;margin-top:8px;">Nutze die Online-Suche oder erstelle manuell.</p></div>';
+        return;
+    }
+    container.innerHTML = foods.map((f,i) => `
+        <div class="custom-food-card">
+            <div class="custom-food-header">
+                <span class="custom-food-name">${f.name}</span>
+                ${f.source ? `<span class="source-badge">${f.source==='open_food_facts'?'🌐':'✏️'}</span>` : ''}
+            </div>
+            <div class="custom-food-nutrients">${Math.round(f.calories)} kcal | P: ${f.protein.toFixed(1)}g | K: ${f.carbs.toFixed(1)}g | F: ${f.fat.toFixed(1)}g</div>
+            <div class="custom-food-actions">
+                <button class="action-btn-small edit" data-idx="${i}" onclick="editCustomFood(this)">✏️ Bearbeiten</button>
+                <button class="action-btn-small delete" data-idx="${i}" onclick="deleteCustomFood(this)">🗑️ Löschen</button>
+            </div>
+        </div>`).join('');
+}
+
+function deleteCustomFood(btn) {
+    const i = parseInt(btn.dataset.idx);
+    const name = appData.customFoods[i].name;
+    if (confirm(`"${name}" löschen?`)) {
+        appData.customFoods.splice(i,1); saveData(); displayCustomFoods(); updateCustomFoodCount();
+    }
+}
+
+function editCustomFood(btn) {
+    const i = parseInt(btn.dataset.idx);
+    editingFoodIndex = i;
+    const f = appData.customFoods[i];
+    document.getElementById('editFoodTitle').textContent = 'Bearbeiten';
+    document.getElementById('editFoodName').value  = f.name;
+    document.getElementById('editCalories').value  = f.calories;
+    document.getElementById('editProtein').value   = f.protein;
+    document.getElementById('editCarbs').value     = f.carbs;
+    document.getElementById('editFat').value       = f.fat;
+    document.getElementById('editFiber').value     = f.fiber;
+    document.getElementById('editIron').value      = f.iron;
+    document.getElementById('editCalcium').value   = f.calcium;
+    document.getElementById('editB12').value       = f.b12;
+    document.getElementById('editOmega3').value    = f.omega3;
+    document.getElementById('editZinc').value      = f.zinc;
+    document.getElementById('editCategory').value  = f.category || 'custom';
+    document.getElementById('editFoodModal').classList.add('active');
+}
+
+function showCreateFoodModal() {
+    editingFoodIndex = null;
+    document.getElementById('editFoodTitle').textContent = 'Neues Lebensmittel';
+    ['editFoodName','editCalories','editProtein','editCarbs','editFat','editFiber','editIron','editCalcium','editB12','editOmega3','editZinc'].forEach(id => {
+        document.getElementById(id).value = id === 'editFoodName' ? '' : 0;
+    });
+    document.getElementById('editCategory').value = 'custom';
+    document.getElementById('editFoodModal').classList.add('active');
+}
+function closeEditFoodModal() { document.getElementById('editFoodModal').classList.remove('active'); editingFoodIndex = null; }
+
+function saveEditedFood() {
+    const name = document.getElementById('editFoodName').value.trim();
+    if (!name) { alert('⚠️ Bitte Namen eingeben!'); return; }
+    const food = {
+        name, category: document.getElementById('editCategory').value,
+        calories: parseFloat(document.getElementById('editCalories').value)||0,
+        protein:  parseFloat(document.getElementById('editProtein').value)||0,
+        carbs:    parseFloat(document.getElementById('editCarbs').value)||0,
+        fat:      parseFloat(document.getElementById('editFat').value)||0,
+        fiber:    parseFloat(document.getElementById('editFiber').value)||0,
+        iron:     parseFloat(document.getElementById('editIron').value)||0,
+        calcium:  parseFloat(document.getElementById('editCalcium').value)||0,
+        b12:      parseFloat(document.getElementById('editB12').value)||0,
+        omega3:   parseFloat(document.getElementById('editOmega3').value)||0,
+        zinc:     parseFloat(document.getElementById('editZinc').value)||0,
+        source: 'manual', dateAdded: new Date().toISOString().split('T')[0]
+    };
+    if (editingFoodIndex !== null) appData.customFoods[editingFoodIndex] = food;
+    else appData.customFoods.push(food);
+    saveData(); closeEditFoodModal(); displayCustomFoods(); updateCustomFoodCount();
+    alert('✅ Gespeichert!');
+}
+
+// ─── MIKRONÄHRSTOFFE ──────────────────────────────────────────────────────────
+function updateDetailedMicronutrients() {
+    const { totals } = getTotalsForDate(appData.currentDate);
+    const micros = [
+        { name:'Vitamin B12', val:totals.b12, unit:'µg', target:4, info:'Für Nervensystem und Blut' },
+        { name:'Eisen',       val:totals.iron, unit:'mg', target:14, info:'Für Sauerstofftransport' },
+        { name:'Calcium',     val:totals.calcium, unit:'mg', target:1000, info:'Für Knochen und Zähne' },
+        { name:'Omega-3',     val:totals.omega3, unit:'mg', target:250, info:'Für Herz und Gehirn' },
+        { name:'Zink',        val:totals.zinc, unit:'mg', target:10, info:'Für Immunsystem' },
+        { name:'Ballaststoffe', val:totals.fiber, unit:'g', target:30, info:'Für Verdauung' },
+    ];
+    document.getElementById('detailedMicronutrients').innerHTML = micros.map(m => {
+        const pct = Math.min(m.val/m.target*100,100);
+        const status = pct<50?'critical':pct<80?'warning':'';
+        return `<div class="micronutrient-item ${status}">
+            <div class="micronutrient-header">
+                <span class="micronutrient-name">${m.name}</span>
+                <span class="micronutrient-value">${m.val.toFixed(1)} ${m.unit}</span>
+            </div>
+            <div class="micronutrient-bar"><div class="micronutrient-fill" style="width:${pct}%"></div></div>
+            <div class="micronutrient-target">Ziel: ${m.target} ${m.unit} (${Math.round(pct)}%) — ${m.info}</div>
+        </div>`;
+    }).join('');
+}
+
+// ─── STATISTIKEN ─────────────────────────────────────────────────────────────
+function updateStats() {
+    let sum = { calories:0, protein:0, b12:0, iron:0, days:0 };
+    for (let i=6; i>=0; i--) {
+        const d = new Date(); d.setDate(d.getDate()-i);
+        const key = d.toISOString().split('T')[0];
+        const { totals } = getTotalsForDate(key);
+        if (totals.calories > 0) {
+            sum.calories += totals.calories; sum.protein += totals.protein;
+            sum.b12 += totals.b12; sum.iron += totals.iron; sum.days++;
+        }
+    }
+    const avg = sum.days || 1;
+    document.getElementById('avgCalories').textContent = Math.round(sum.calories/avg);
+    document.getElementById('avgProtein').textContent  = Math.round(sum.protein/avg);
+    document.getElementById('avgB12').textContent      = (sum.b12/avg).toFixed(1);
+    document.getElementById('avgIron').textContent     = (sum.iron/avg).toFixed(1);
+
+    const achievements = [
+        {days:1, title:'🌱 Erste Schritte', desc:'Ersten Tag getrackt!'},
+        {days:7, title:'🔥 Eine Woche', desc:'7 Tage am Ball!'},
+        {days:30, title:'💪 Ein Monat', desc:'30 Tage Tracking!'},
+        {days:90, title:'🏆 Drei Monate', desc:'Du bist Champion!'},
+    ];
+    const unlocked = achievements.filter(a => sum.days >= a.days);
+    document.getElementById('achievements').innerHTML = unlocked.length
+        ? unlocked.map(a => `<div class="stat-card" style="text-align:left;margin-bottom:10px"><div style="font-size:1.3em;margin-bottom:6px">${a.title}</div><div style="opacity:.9;font-size:.9em">${a.desc}</div></div>`).join('')
+        : '<p style="text-align:center;color:#bbb;padding:20px">Tracke deine erste Mahlzeit!</p>';
+}
+
+// ─── EINSTELLUNGEN ────────────────────────────────────────────────────────────
+function loadSettings() {
+    document.getElementById('dailyCalories').value = appData.settings.dailyCalories;
+    document.getElementById('dailyProtein').value  = appData.settings.dailyProtein;
+    document.getElementById('dailyCarbs').value    = appData.settings.dailyCarbs;
+    document.getElementById('dailyFat').value      = appData.settings.dailyFat;
+}
+function saveSettings() {
+    appData.settings.dailyCalories = parseInt(document.getElementById('dailyCalories').value)||2000;
+    appData.settings.dailyProtein  = parseInt(document.getElementById('dailyProtein').value)||60;
+    appData.settings.dailyCarbs    = parseInt(document.getElementById('dailyCarbs').value)||250;
+    appData.settings.dailyFat      = parseInt(document.getElementById('dailyFat').value)||65;
+    saveData(); updateDashboard(); alert('✅ Gespeichert!');
+}
+function clearAllData() {
+    if (confirm('⚠️ Alle Daten löschen?')) {
+        if (confirm('Wirklich sicher? Alles geht verloren!')) {
+            localStorage.removeItem('veganNutritionData'); location.reload();
+        }
+    }
+}
+
+window.onload = init;
+</script>
+</body>
+</html>
