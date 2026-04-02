@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🌱 Vegan Tracker</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        :root {
+            --green: #6B7C70; --green-l: #8A9A8E; --green-ll: #f0f4f1;
+            --green-d: #4a5e4e; --sidebar-w: 220px; --top-h: 52px;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background: #f0f4f1; min-height: 100vh; overflow-x: hidden; }
+        .topbar { position: fixed; top: 0; left: 0; right: 0; height: var(--top-h); background: white; border-bottom: 1px solid #e0e8e2; display: flex; align-items: center; padding: 0 16px; z-index: 200; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .topbar-logo { font-size: 1.1em; font-weight: 600; color: var(--green-d); flex: 1; }
+        .topbar-user { font-size: 0.85em; color: var(--green); display: flex; align-items: center; gap: 8px; }
+        .topbar-user button { padding: 6px 12px; background: var(--green-ll); border: 1px solid #d0dbd2; border-radius: 6px; font-size: 0.85em; cursor: pointer; color: var(--green-d); font-family: inherit; }
+        .hamburger { display: none; background: none; border: none; cursor: pointer; font-size: 1.4em; color: var(--green-d); margin-right: 12px; padding: 4px; }
+        .sidebar { position: fixed; top: var(--top-h); left: 0; bottom: 0; width: var(--sidebar-w); background: white; border-right: 1px solid #e0e8e2; display: flex; flex-direction: column; z-index: 150; transition: transform 0.25s ease; overflow: hidden; }
+        .sidebar-section { padding: 16px 0 8px; border-bottom: 1px solid #f0f4f1; }
+        .sidebar-section-label { font-size: 0.68em; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #aaa; padding: 0 16px 8px; }
+        .nav-btn { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 16px; background: none; border: none; cursor: pointer; font-family: inherit; font-size: 0.92em; color: #555; text-align: left; transition: background 0.15s; white-space: nowrap; }
+        .nav-btn .nav-icon { font-size: 1.2em; flex-shrink: 0; width: 24px; text-align: center; }
+        .nav-btn:hover { background: var(--green-ll); color: var(--green-d); }
+        .nav-btn.active { background: #e8f0ea; color: var(--green-d); font-weight: 600; border-right: 3px solid var(--green); }
+        .sidebar-widget { margin: 8px 12px; background: var(--green-ll); border-radius: 8px; padding: 10px 12px; font-size: 0.8em; }
+        .sidebar-widget-title { color: var(--green); font-weight: 600; margin-bottom: 6px; font-size: 0.85em; }
+        .sidebar-micro-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+        .sidebar-micro-bar { height: 4px; background: #d0dbd2; border-radius: 2px; margin-top: 2px; }
+        .sidebar-micro-fill { height: 100%; background: var(--green-l); border-radius: 2px; transition: width 0.3s; }
+        .sidebar-micro-fill.warn { background: #f39c12; }
+        .sidebar-micro-fill.crit { background: #e74c3c; }
+        .main { margin-left: var(--sidebar-w); margin-top: var(--top-h); padding: 20px 24px 40px; min-height: calc(100vh - var(--top-h)); }
+        .page { display: none; }
+        .page.active { display: block; }
+        .card { background: white; border-radius: 14px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
+        .card h2 { color: var(--green); font-size: 1.05em; font-weight: 600; margin-bottom: 14px; }
+        .date-selector { display: flex; align-items: center; justify-content: space-between; background: white; padding: 12px 16px; border-radius: 12px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .date-selector button { padding: 8px 14px; background: var(--green-l); color: white; border: none; border-radius: 8px; font-size: 1em; cursor: pointer; }
+        .current-date { font-size: 0.95em; font-weight: 600; color: #333; text-align: center; flex: 1; }
+        .macro-plate-container { display: flex; align-items: center; gap: 20px; margin-bottom: 16px; }
+        .plate-wrap { flex-shrink: 0; position: relative; width: 130px; height: 130px; }
+        .plate-wrap canvas { width: 130px; height: 130px; }
+        .plate-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; }
+        .plate-kcal { font-size: 1.2em; font-weight: 700; color: var(--green-d); }
+        .plate-kcal-label { font-size: 0.68em; color: #888; }
+        .plate-legend { flex: 1; display: flex; flex-direction: column; gap: 7px; }
+        .legend-item { display: flex; align-items: center; gap: 8px; }
+        .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .legend-label { font-size: 0.82em; color: #555; flex: 1; }
+        .legend-value { font-size: 0.82em; font-weight: 600; color: #333; }
+        .micronutrient-item { background: #f8f9fa; padding: 12px 14px; border-radius: 8px; border-left: 4px solid var(--green-l); margin-bottom: 10px; }
+        .micronutrient-item.warning { border-left-color: #f39c12; }
+        .micronutrient-item.critical { border-left-color: #e74c3c; }
+        .micronutrient-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .micronutrient-name { font-weight: 600; color: #333; font-size: 0.9em; }
+        .micronutrient-value { font-weight: bold; color: var(--green-l); font-size: 0.9em; }
+        .micronutrient-bar { background: #e0e0e0; height: 5px; border-radius: 3px; overflow: hidden; margin-bottom: 3px; }
+        .micronutrient-fill { height: 100%; background: var(--green-l); transition: width 0.3s; }
+        .micronutrient-target { font-size: 0.78em; color: #666; }
+        .micronutrient-sources { margin-top: 6px; padding-top: 6px; border-top: 1px solid #e0e0e0; font-size: 0.76em; color: #666; }
+        .source-item { display: flex; justify-content: space-between; padding: 2px 0; }
+        .source-amount { font-weight: 600; color: var(--green-l); }
+        .search-mode-toggle { display: flex; gap: 8px; margin-bottom: 12px; }
+        .mode-btn { flex: 1; padding: 10px; border: 2px solid #e0e0e0; background: white; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.88em; font-family: inherit; transition: all 0.2s; }
+        .mode-btn.active { background: var(--green-l); color: white; border-color: var(--green-l); }
+        .search-box { display: flex; gap: 8px; margin-bottom: 12px; }
+        .search-box input { flex: 1; padding: 12px 14px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; font-family: inherit; }
+        .search-box input:focus { outline: none; border-color: var(--green-l); }
+        .search-box button { padding: 12px 18px; background: var(--green-l); color: white; border: none; border-radius: 8px; font-size: 0.9em; font-weight: 500; cursor: pointer; font-family: inherit; }
+        .online-search-info { background: #e3f2fd; padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; border-left: 4px solid #2196f3; font-size: 0.83em; }
+        .food-item { background: #f8f9fa; padding: 13px; margin-bottom: 10px; border-radius: 10px; }
+        .food-name { font-weight: 600; color: #333; font-size: 0.95em; margin-bottom: 3px; }
+        .food-nutrients { font-size: 0.8em; color: #666; margin-bottom: 9px; }
+        .add-food-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .add-food-row input[type="number"] { width: 68px; padding: 9px 8px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; text-align: center; font-family: inherit; }
+        .add-food-row select { flex: 1; padding: 9px 8px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; font-family: inherit; background: white; }
+        .add-btn { padding: 9px 16px; background: var(--green-l); color: white; border: none; border-radius: 8px; font-size: 1em; font-weight: 600; cursor: pointer; font-family: inherit; }
+        .preview-btn { padding: 9px 12px; background: #e3f2fd; color: #1976d2; border: none; border-radius: 8px; font-size: 0.83em; font-weight: 600; cursor: pointer; font-family: inherit; }
+        .food-list { max-height: 55vh; overflow-y: auto; }
+        .meal-section { margin-bottom: 14px; background: #f8f9fa; padding: 13px; border-radius: 10px; }
+        .meal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .meal-title { font-size: 0.95em; font-weight: 600; color: var(--green); }
+        .meal-total { font-size: 0.78em; color: #666; }
+        .logged-food { background: white; padding: 11px; margin-bottom: 7px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .logged-food-info { flex: 1; padding-right: 10px; }
+        .remove-btn { padding: 7px 13px; background: #e74c3c; color: white; border: none; border-radius: 6px; cursor: pointer; font-family: inherit; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .stat-card { background: linear-gradient(135deg, #3498db, #2980b9); color: white; padding: 14px; border-radius: 10px; text-align: center; }
+        .stat-value { font-size: 1.8em; font-weight: bold; margin-bottom: 3px; }
+        .stat-label { font-size: 0.78em; opacity: 0.9; }
+        .custom-food-card { background: #f8f9fa; padding: 13px; border-radius: 10px; margin-bottom: 10px; border-left: 4px solid var(--green-l); }
+        .custom-food-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 7px; }
+        .custom-food-name { font-weight: 600; font-size: 0.95em; color: #333; flex: 1; }
+        .custom-food-nutrients { font-size: 0.83em; color: #666; }
+        .custom-food-actions { display: flex; gap: 8px; margin-top: 9px; }
+        .action-btn-small { flex: 1; padding: 9px; border: none; border-radius: 8px; font-size: 0.83em; font-weight: 600; cursor: pointer; font-family: inherit; }
+        .action-btn-small.edit { background: #3498db; color: white; }
+        .action-btn-small.delete { background: #e74c3c; color: white; }
+        .settings-form { display: grid; gap: 14px; }
+        .form-group { display: grid; gap: 5px; }
+        .form-group label { font-weight: 600; color: #333; font-size: 0.88em; }
+        .form-group input, .form-group select { padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; font-family: inherit; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--green-l); }
+        .save-btn { padding: 14px; background: var(--green-l); color: white; border: none; border-radius: 10px; font-size: 0.95em; font-weight: 500; cursor: pointer; font-family: inherit; width: 100%; }
+        .danger-btn { padding: 14px; background: #e74c3c; color: white; border: none; border-radius: 10px; font-size: 0.95em; font-weight: 500; cursor: pointer; font-family: inherit; width: 100%; margin-top: 8px; }
+        .auth-container { max-width: 380px; margin: 40px auto; }
+        .auth-tabs { display: flex; margin-bottom: 20px; border-radius: 10px; overflow: hidden; border: 2px solid #e0e0e0; }
+        .auth-tab { flex: 1; padding: 12px; background: white; border: none; font-family: inherit; font-size: 0.95em; font-weight: 600; cursor: pointer; color: #999; transition: all 0.2s; }
+        .auth-tab.active { background: var(--green-l); color: white; }
+        .auth-form { display: grid; gap: 12px; }
+        .auth-form input { padding: 14px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 16px; font-family: inherit; }
+        .auth-form input:focus { outline: none; border-color: var(--green-l); }
+        .auth-btn { padding: 15px; background: var(--green-l); color: white; border: none; border-radius: 10px; font-size: 1em; font-weight: 600; cursor: pointer; font-family: inherit; }
+        .auth-skip { text-align: center; margin-top: 12px; font-size: 0.85em; color: #888; }
+        .auth-skip a { color: var(--green); cursor: pointer; text-decoration: underline; }
+        .auth-error { color: #e74c3c; font-size: 0.85em; text-align: center; min-height: 20px; }
+        .online-result-badge { display: inline-block; background: #2196f3; color: white; padding: 2px 7px; border-radius: 8px; font-size: 0.73em; margin-left: 5px; }
+        .source-badge { display: inline-block; background: #9c27b0; color: white; padding: 2px 6px; border-radius: 7px; font-size: 0.7em; margin-left: 5px; }
+        .food-info-bar { font-size: 0.82em; color: #666; margin-bottom: 12px; padding: 8px 12px; background: var(--green-ll); border-radius: 8px; }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 400; align-items: flex-end; justify-content: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; border-radius: 20px 20px 0 0; padding: 22px 20px 30px; width: 100%; max-height: 85vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .modal-title { font-size: 1.1em; font-weight: 600; color: var(--green-d); }
+        .modal-close { background: none; border: none; font-size: 1.5em; cursor: pointer; color: #999; }
+        .nutrient-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+        .nutrient-row:last-child { border-bottom: none; }
+        .nutrient-label { font-weight: 600; color: #666; font-size: 0.88em; }
+        .nutrient-value { color: #333; font-weight: bold; font-size: 0.88em; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 16px; }
+        .modal-btn { flex: 1; padding: 14px; border: none; border-radius: 10px; font-size: 0.95em; font-weight: 600; cursor: pointer; font-family: inherit; }
+        .modal-btn.primary { background: var(--green-l); color: white; }
+        .modal-btn.secondary { background: #e0e0e0; color: #333; }
+        .empty-state { text-align: center; padding: 28px 20px; color: #999; }
+        .empty-state-icon { font-size: 2.3em; margin-bottom: 10px; }
+        .loading-text { text-align: center; padding: 28px; color: #999; font-size: 1.05em; }
+        .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 140; }
+        @media (max-width: 768px) {
+            .hamburger { display: block; }
+            .sidebar { transform: translateX(-100%); box-shadow: 4px 0 20px rgba(0,0,0,0.15); }
+            .sidebar.open { transform: translateX(0); }
+            .sidebar-overlay.open { display: block; }
+            .main { margin-left: 0; padding: 16px 14px 30px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="topbar">
+    <button class="hamburger" onclick="toggleSidebar()">&#9776;</button>
+    <div class="topbar-logo">&#127807; Vegan Tracker</div>
+    <div class="topbar-user" id="topbarUser">
+        <button onclick="showPage('login')">Anmelden</button>
+    </div>
+</div>
+
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-section">
+        <div class="sidebar-section-label">Hauptfunktionen</div>
+        <button class="nav-btn active" id="nav-foodlog" onclick="showPage('foodlog')">
+            <span class="nav-icon">&#127869;</span><span class="nav-label">Essenseingabe</span>
+        </button>
+        <button class="nav-btn" id="nav-dashboard" onclick="showPage('dashboard')">
+            <span class="nav-icon">&#128202;</span><span class="nav-label">Dashboard</span>
+        </button>
+        <button class="nav-btn" id="nav-micro" onclick="showPage('micro')">
+            <span class="nav-icon">&#128138;</span><span class="nav-label">Mikron&auml;hrstoffe</span>
+        </button>
+    </div>
+
+    <div class="sidebar-widget" id="sidebarWidget">
+        <div class="sidebar-widget-title">Heute</div>
+        <div class="sidebar-micro-row">
+            <span style="font-size:0.9em;color:#555">B12</span>
+            <span style="font-size:0.85em;font-weight:600;color:#333" id="sw-b12">0 &micro;g</span>
+        </div>
+        <div class="sidebar-micro-bar"><div class="sidebar-micro-fill" id="sw-b12-bar" style="width:0%"></div></div>
+        <div class="sidebar-micro-row" style="margin-top:6px">
+            <span style="font-size:0.9em;color:#555">Eisen</span>
+            <span style="font-size:0.85em;font-weight:600;color:#333" id="sw-iron">0 mg</span>
+        </div>
+        <div class="sidebar-micro-bar"><div class="sidebar-micro-fill" id="sw-iron-bar" style="width:0%"></div></div>
+        <div class="sidebar-micro-row" style="margin-top:6px">
+            <span style="font-size:0.9em;color:#555">Kalorien</span>
+            <span style="font-size:0.85em;font-weight:600;color:#333" id="sw-kcal">0 kcal</span>
+        </div>
+    </div>
+
+    <div class="sidebar-section" id="loggedInNav" style="display:none">
+        <div class="sidebar-section-label">Mein Bereich</div>
+        <button class="nav-btn" id="nav-myfoods" onclick="showPage('myfoods')">
+            <span class="nav-icon">&#11088;</span><span class="nav-label">Meine Lebensmittel</span>
+        </button>
+        <button class="nav-btn" id="nav-stats" onclick="showPage('stats')">
+            <span class="nav-icon">&#128200;</span><span class="nav-label">Statistiken</span>
+        </button>
+        <button class="nav-btn" id="nav-settings" onclick="showPage('settings')">
+            <span class="nav-icon">&#9881;</span><span class="nav-label">Einstellungen</span>
+        </button>
+    </div>
+
+    <div id="guestHint" style="padding:12px 14px;font-size:0.78em;color:#aaa;line-height:1.5">
+        <a onclick="showPage('login')" style="color:var(--green);cursor:pointer;text-decoration:underline">Anmelden</a> f&uuml;r Favoriten, Statistiken &amp; Einstellungen
+    </div>
+</div>
+
+<div class="main" id="main">
+
+    <div id="page-foodlog" class="page active">
+        <div class="date-selector">
+            <button onclick="changeDate(-1)">&larr;</button>
+            <span class="current-date" id="currentDate"></span>
+            <button onclick="changeDate(1)">&rarr;</button>
+        </div>
+        <div class="card">
+            <h2>Lebensmittel hinzuf&uuml;gen</h2>
+            <div class="food-info-bar">&#128230; Datenbank: <strong id="foodCount">0</strong> | &#11088; Meine: <strong id="customFoodCount">0</strong></div>
+            <div class="search-mode-toggle">
+                <button class="mode-btn active" id="localSearchBtn" onclick="setSearchMode('local')">Lokale Suche</button>
+                <button class="mode-btn" id="onlineSearchBtn" onclick="setSearchMode('online')">&#127760; USDA Online</button>
+            </div>
+            <div class="online-search-info" id="onlineSearchInfo" style="display:none">
+                Sucht in <strong>USDA FoodData Central</strong> &mdash; auf Deutsch eingeben, automatische &Uuml;bersetzung.
+            </div>
+            <div class="search-box">
+                <input type="text" id="foodSearch" placeholder="Lebensmittel suchen&hellip;" onkeydown="if(event.key==='Enter'){searchFood();}">
+                <button onclick="searchFood()">Suchen</button>
+            </div>
+            <div class="food-list" id="foodResults"></div>
+        </div>
+        <div class="card">
+            <h2>Heutige Mahlzeiten</h2>
+            <div id="mealLog"></div>
+        </div>
+    </div>
+
+    <div id="page-dashboard" class="page">
+        <div class="date-selector">
+            <button onclick="changeDate(-1)">&larr;</button>
+            <span class="current-date" id="currentDate2"></span>
+            <button onclick="changeDate(1)">&rarr;</button>
+        </div>
+        <div class="card">
+            <h2>Tages&uuml;bersicht</h2>
+            <div class="macro-plate-container">
+                <div class="plate-wrap">
+                    <canvas id="macroPlate" width="130" height="130"></canvas>
+                    <div class="plate-center">
+                        <div class="plate-kcal"><span id="caloriesValue">0</span></div>
+                        <div class="plate-kcal-label">kcal</div>
+                    </div>
+                </div>
+                <div class="plate-legend">
+                    <div class="legend-item"><div class="legend-dot" style="background:#9BAA9E"></div><span class="legend-label">Protein</span><span class="legend-value"><span id="proteinValue">0</span>g / <span id="proteinTarget">60</span>g</span></div>
+                    <div class="legend-item"><div class="legend-dot" style="background:#C4B99A"></div><span class="legend-label">Kohlenhydrate</span><span class="legend-value"><span id="carbsValue">0</span>g / <span id="carbsTarget">250</span>g</span></div>
+                    <div class="legend-item"><div class="legend-dot" style="background:#B5C2B9"></div><span class="legend-label">Fett</span><span class="legend-value"><span id="fatValue">0</span>g / <span id="fatTarget">65</span>g</span></div>
+                    <div class="legend-item"><div class="legend-dot" style="background:#e8ece9"></div><span class="legend-label">Ziel</span><span class="legend-value"><span id="caloriesTarget">2000</span> kcal</span></div>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <h2>Wichtige Mikron&auml;hrstoffe</h2>
+            <div class="micronutrient-item" id="micro-b12"><div class="micronutrient-header"><span class="micronutrient-name">Vitamin B12</span><span class="micronutrient-value"><span id="b12Value">0</span> &micro;g</span></div><div class="micronutrient-bar"><div class="micronutrient-fill" id="b12Fill"></div></div><div class="micronutrient-target">Ziel: 4 &micro;g</div><div class="micronutrient-sources" id="b12Sources"></div></div>
+            <div class="micronutrient-item" id="micro-iron"><div class="micronutrient-header"><span class="micronutrient-name">Eisen</span><span class="micronutrient-value"><span id="ironValue">0</span> mg</span></div><div class="micronutrient-bar"><div class="micronutrient-fill" id="ironFill"></div></div><div class="micronutrient-target">Ziel: 14 mg</div><div class="micronutrient-sources" id="ironSources"></div></div>
+            <div class="micronutrient-item" id="micro-calcium"><div class="micronutrient-header"><span class="micronutrient-name">Calcium</span><span class="micronutrient-value"><span id="calciumValue">0</span> mg</span></div><div class="micronutrient-bar"><div class="micronutrient-fill" id="calciumFill"></div></div><div class="micronutrient-target">Ziel: 1000 mg</div><div class="micronutrient-sources" id="calciumSources"></div></div>
+            <div class="micronutrient-item" id="micro-omega3"><div class="micronutrient-header"><span class="micronutrient-name">Omega-3</span><span class="micronutrient-value"><span id="omega3Value">0</span> mg</span></div><div class="micronutrient-bar"><div class="micronutrient-fill" id="omega3Fill"></div></div><div class="micronutrient-target">Ziel: 250 mg</div><div class="micronutrient-sources" id="omega3Sources"></div></div>
+        </div>
+    </div>
+
+    <div id="page-micro" class="page">
+        <div class="card"><h2>Detaillierte Mikron&auml;hrstoffe</h2><p style="color:#666;font-size:0.85em;margin-bottom:14px">Besonders wichtig f&uuml;r vegane Ern&auml;hrung</p><div id="detailedMicronutrients"></div></div>
+    </div>
+
+    <div id="page-myfoods" class="page">
+        <div class="card"><h2>Meine Lebensmittel</h2><p style="color:#666;font-size:0.88em;margin-bottom:14px">Aus Online-Suche gespeicherte oder manuell erstellte Lebensmittel.</p><div id="customFoodsList"></div></div>
+        <div class="card"><h2>Manuell erstellen</h2><button class="save-btn" onclick="showCreateFoodModal()">+ Neues Lebensmittel</button></div>
+    </div>
+
+    <div id="page-stats" class="page">
+        <div class="card"><h2>7-Tage Durchschnitt</h2><div class="stats-grid"><div class="stat-card"><div class="stat-value" id="avgCalories">0</div><div class="stat-label">&Oslash; Kalorien/Tag</div></div><div class="stat-card" style="background:linear-gradient(135deg,#e74c3c,#c0392b)"><div class="stat-value" id="avgProtein">0</div><div class="stat-label">&Oslash; Protein/Tag (g)</div></div><div class="stat-card" style="background:linear-gradient(135deg,#8A9A8E,#6B7C70)"><div class="stat-value" id="avgB12">0</div><div class="stat-label">&Oslash; B12/Tag (&micro;g)</div></div><div class="stat-card" style="background:linear-gradient(135deg,#f39c12,#d68910)"><div class="stat-value" id="avgIron">0</div><div class="stat-label">&Oslash; Eisen/Tag (mg)</div></div></div></div>
+        <div class="card"><h2>Erfolge</h2><div id="achievements"></div></div>
+    </div>
+
+    <div id="page-settings" class="page">
+        <div class="card"><h2>Pers&ouml;nliche Ziele</h2><div class="settings-form"><div class="form-group"><label>Kalorien/Tag (kcal)</label><input type="number" id="dailyCalories" value="2000" inputmode="numeric"></div><div class="form-group"><label>Protein/Tag (g)</label><input type="number" id="dailyProtein" value="60" inputmode="numeric"></div><div class="form-group"><label>Kohlenhydrate/Tag (g)</label><input type="number" id="dailyCarbs" value="250" inputmode="numeric"></div><div class="form-group"><label>Fett/Tag (g)</label><input type="number" id="dailyFat" value="65" inputmode="numeric"></div><button class="save-btn" onclick="saveSettings()">&#128190; Speichern</button></div></div>
+        <div class="card"><h2>Daten verwalten</h2><button class="danger-btn" onclick="clearAllData()">&#128465; Alle Daten l&ouml;schen</button></div>
+        <div class="card"><h2>Konto</h2><button class="danger-btn" onclick="signOut()">&#128682; Abmelden</button></div>
+    </div>
+
+    <div id="page-login" class="page">
+        <div class="auth-container">
+            <div class="card">
+                <h2 style="text-align:center;margin-bottom:20px">&#127807; Willkommen</h2>
+                <div class="auth-tabs"><button class="auth-tab active" id="loginTab" onclick="switchAuthTab('login')">Anmelden</button><button class="auth-tab" id="registerTab" onclick="switchAuthTab('register')">Registrieren</button></div>
+                <div class="auth-form">
+                    <input type="email" id="authEmail" placeholder="E-Mail">
+                    <input type="password" id="authPassword" placeholder="Passwort">
+                    <div class="auth-error" id="authError"></div>
+                    <button class="auth-btn" id="authSubmitBtn" onclick="handleAuth()">Anmelden</button>
+                </div>
+                <div class="auth-skip">Oder <a onclick="showPage('foodlog')">ohne Konto fortfahren</a></div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div id="previewModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header"><h2 class="modal-title" id="previewTitle">Lebensmittel</h2><button class="modal-close" onclick="closePreviewModal()">&times;</button></div>
+        <div id="previewContent"></div>
+        <div class="modal-actions"><button class="modal-btn secondary" onclick="closePreviewModal()">Schlie&szlig;en</button><button class="modal-btn primary" onclick="confirmAddFood()">&#128190; Zu meinen Lebensmitteln</button></div>
+    </div>
+</div>
+
+<div id="editFoodModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header"><h2 class="modal-title" id="editFoodTitle">Lebensmittel</h2><button class="modal-close" onclick="closeEditFoodModal()">&times;</button></div>
+        <div class="settings-form">
+            <div class="form-group"><label>Name</label><input type="text" id="editFoodName" placeholder="z.B. Bio Hummus"></div>
+            <div class="form-group"><label>Kalorien (kcal/100g)</label><input type="number" id="editCalories" step="0.1" inputmode="decimal"></div>
+            <div class="form-group"><label>Protein (g/100g)</label><input type="number" id="editProtein" step="0.1" inputmode="decimal"></div>
+            <div class="form-group"><label>Kohlenhydrate (g/100g)</label><input type="number" id="editCarbs" step="0.1" inputmode="decimal"></div>
+            <div class="form-group"><label>Fett (g/100g)</label><input type="number" id="editFat" step="0.1" inputmode="decimal"></div>
+            <div class="form-group"><label>Ballaststoffe (g/100g)</label><input type="number" id="editFiber" step="0.1" inputmode="decimal"></div>
+            <div class="form-group"><label>Eisen (mg/100g)</label><input type="number" id="editIron" step="0.1" inputmode="decimal"></div>
+            <div class="form-group"><label>Calcium (mg/100g)</label><input type="number" id="editCalcium" step="0.1" inputmode="decimal"></div>
+            <div class="form-group"><label>Vitamin B12 (&micro;g/100g)</label><input type="number" id="editB12" step="0.01" inputmode="decimal"></div>
+            <div class="form-group"><label>Omega-3 (mg/100g)</label><input type="number" id="editOmega3" step="1" inputmode="decimal"></div>
+            <div class="form-group"><label>Zink (mg/100g)</label><input type="number" id="editZinc" step="0.1" inputmode="decimal"></div>
+            <div class="form-group"><label>Kategorie</label><select id="editCategory"><option value="custom">Eigenes Lebensmittel</option><option value="protein">Proteinquelle</option><option value="vegetable">Gem&uuml;se</option><option value="fruit">Obst</option><option value="grain">Getreide</option><option value="nuts">N&uuml;sse &amp; Samen</option><option value="legume">H&uuml;lsenfr&uuml;chte</option><option value="oil">&Ouml;l</option><option value="alternative">Milchalternative</option></select></div>
+        </div>
+        <div class="modal-actions"><button class="modal-btn secondary" onclick="closeEditFoodModal()">Abbrechen</button><button class="modal-btn primary" onclick="saveEditedFood()">Speichern</button></div>
+    </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+const app = initializeApp({
+    apiKey: "AIzaSyB759Dx8DqBXq90qa9hOwL0mdGhcGszNg8",
+    authDomain: "vegane-naehrstofftracker.firebaseapp.com",
+    projectId: "vegane-naehrstofftracker",
+    storageBucket: "vegane-naehrstofftracker.firebasestorage.app",
+    messagingSenderId: "532791262666",
+    appId: "1:532791262666:web:4e93bdb2eee27fc14e6333"
+});
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+onAuthStateChanged(auth, async (user) => {
+    if (user) {
+        document.getElementById('topbarUser').innerHTML = `<span style="font-size:0.8em;color:#888">${user.email}</span><button onclick="window.signOut()">Abmelden</button>`;
+        document.getElementById('loggedInNav').style.display = 'block';
+        document.getElementById('guestHint').style.display = 'none';
+        try {
+            const snap = await getDoc(doc(db, 'users', user.uid));
+            if (snap.exists() && snap.data().appData) {
+                window.appData = { ...window.appData, ...snap.data().appData };
+                if (!Array.isArray(window.appData.customFoods)) window.appData.customFoods = [];
+                window.loadSettings(); window.updateDashboard(); window.updateMealLog(); window.updateSidebarWidget();
+            }
+        } catch(e) { console.warn(e); }
+    } else {
+        document.getElementById('topbarUser').innerHTML = `<button onclick="showPage('login')">Anmelden</button>`;
+        document.getElementById('loggedInNav').style.display = 'none';
+        document.getElementById('guestHint').style.display = 'block';
+    }
+});
+
+window.saveToFirestore = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+    try { await setDoc(doc(db, 'users', user.uid), { appData: window.appData, updatedAt: new Date().toISOString() }); }
+    catch(e) { console.warn(e); }
+};
+
+window.handleAuth = async () => {
+    const email = document.getElementById('authEmail').value.trim();
+    const password = document.getElementById('authPassword').value;
+    const isLogin = document.getElementById('loginTab').classList.contains('active');
+    const errEl = document.getElementById('authError');
+    errEl.textContent = '';
+    if (!email || !password) { errEl.textContent = 'Bitte E-Mail und Passwort eingeben.'; return; }
+    try {
+        if (isLogin) await signInWithEmailAndPassword(auth, email, password);
+        else await createUserWithEmailAndPassword(auth, email, password);
+        window.showPage('foodlog');
+    } catch(e) {
+        const msgs = { 'auth/user-not-found':'Kein Konto gefunden.', 'auth/wrong-password':'Falsches Passwort.', 'auth/email-already-in-use':'E-Mail bereits registriert.', 'auth/weak-password':'Passwort mind. 6 Zeichen.', 'auth/invalid-credential':'E-Mail oder Passwort falsch.' };
+        errEl.textContent = msgs[e.code] || e.message;
+    }
+};
+
+window.signOut = async () => { await fbSignOut(auth); window.showPage('foodlog'); };
+</script>
+
+<script>
+window.appData = { settings:{dailyCalories:2000,dailyProtein:60,dailyCarbs:250,dailyFat:65}, foodLog:{}, customFoods:[], currentDate:new Date().toISOString().split('T')[0] };
+let searchMode='local', previewFood=null, editingFoodIndex=null;
+
+const deToEn = {'tofu':'tofu','linsen':'lentils','kichererbsen':'chickpeas','spinat':'spinach','brokkoli':'broccoli','karotten':'carrots','kartoffeln':'potatoes','erdaepfel':'potatoes','mandeln':'almonds','walnuesse':'walnuts','chiasamen':'chia seeds','leinsamen':'flaxseed','haferflocken':'oats','quinoa':'quinoa','bohnen':'beans','erbsen':'peas','mais':'corn','reis':'rice','nudeln':'pasta','aepfel':'apples','apfel':'apple','banane':'banana','orangen':'oranges','beeren':'berries','avocado':'avocado','tomaten':'tomatoes','gurke':'cucumber','kuerbis':'pumpkin','pilze':'mushrooms','champignons':'mushrooms','sesam':'sesame','kuerbisskerne':'pumpkin seeds','hanfsamen':'hemp seeds','seitan':'seitan','tempeh':'tempeh','edamame':'edamame','hummus':'hummus','olivenoel':'olive oil','hafermlch':'oat milk','sojamilch':'soy milk','sojajoghurt':'soy yogurt','naehrhefe':'nutritional yeast','schokolade':'chocolate','gruenkohl':'kale','suesskartoffel':'sweet potato','schwarze bohnen':'black beans','kidneybohnen':'kidney beans','erdnussmus':'peanut butter','mandelmus':'almond butter'};
+
+function translateToEnglish(term) {
+    const lower = term.toLowerCase().trim().replace(/ae/g,'ae').replace(/oe/g,'oe').replace(/ue/g,'ue').replace(/ae/gi,'ae');
+    const norm = lower.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    if (deToEn[norm]) return deToEn[norm];
+    for (const [de,en] of Object.entries(deToEn)) { if (norm.includes(de)||de.includes(norm)) return en; }
+    return term;
+}
+
+const veganFoodDatabase = [
+    {name:"Tofu (fest)",calories:144,protein:15.8,carbs:2.7,fat:8.7,fiber:2.3,iron:2.7,calcium:350,b12:0,omega3:0,zinc:1.5,category:"protein"},
+    {name:"Tempeh",calories:193,protein:18.5,carbs:9.4,fat:10.8,fiber:5.0,iron:2.7,calcium:111,b12:0,omega3:0,zinc:1.8,category:"protein"},
+    {name:"Seitan",calories:370,protein:75.0,carbs:14.0,fat:1.9,fiber:0.6,iron:5.2,calcium:20,b12:0,omega3:0,zinc:2.0,category:"protein"},
+    {name:"Edamame",calories:121,protein:11.9,carbs:8.9,fat:5.2,fiber:5.2,iron:2.3,calcium:63,b12:0,omega3:0,zinc:1.4,category:"protein"},
+    {name:"Linsen (gekocht)",calories:116,protein:9.0,carbs:20.1,fat:0.4,fiber:7.9,iron:3.3,calcium:19,b12:0,omega3:0,zinc:1.3,category:"legume"},
+    {name:"Rote Linsen (gekocht)",calories:101,protein:7.6,carbs:17.5,fat:0.4,fiber:5.2,iron:2.4,calcium:14,b12:0,omega3:0,zinc:1.1,category:"legume"},
+    {name:"Kichererbsen (gekocht)",calories:164,protein:8.9,carbs:27.4,fat:2.6,fiber:7.6,iron:2.9,calcium:49,b12:0,omega3:0,zinc:1.5,category:"legume"},
+    {name:"Schwarze Bohnen (gekocht)",calories:132,protein:8.9,carbs:23.7,fat:0.5,fiber:8.7,iron:2.1,calcium:27,b12:0,omega3:0,zinc:1.2,category:"legume"},
+    {name:"Haferflocken",calories:389,protein:16.9,carbs:66.3,fat:6.9,fiber:10.6,iron:4.7,calcium:54,b12:0,omega3:0,zinc:4.0,category:"grain"},
+    {name:"Quinoa (gekocht)",calories:120,protein:4.4,carbs:21.3,fat:1.9,fiber:2.8,iron:1.5,calcium:17,b12:0,omega3:0,zinc:1.1,category:"grain"},
+    {name:"Vollkornnudeln (gekocht)",calories:124,protein:5.0,carbs:25.6,fat:1.4,fiber:3.9,iron:1.3,calcium:15,b12:0,omega3:0,zinc:1.0,category:"grain"},
+    {name:"Naturreis (gekocht)",calories:123,protein:2.7,carbs:25.6,fat:1.0,fiber:1.2,iron:0.6,calcium:8,b12:0,omega3:0,zinc:0.7,category:"grain"},
+    {name:"Chiasamen",calories:486,protein:16.5,carbs:42.1,fat:30.7,fiber:34.4,iron:7.7,calcium:631,b12:0,omega3:17830,zinc:4.6,category:"seeds"},
+    {name:"Leinsamen",calories:534,protein:18.3,carbs:28.9,fat:42.2,fiber:27.3,iron:5.7,calcium:255,b12:0,omega3:22813,zinc:4.3,category:"seeds"},
+    {name:"Sesam",calories:573,protein:17.7,carbs:23.5,fat:49.7,fiber:11.8,iron:14.6,calcium:975,b12:0,omega3:0,zinc:7.8,category:"seeds"},
+    {name:"Kürbiskerne",calories:559,protein:30.2,carbs:10.7,fat:49.0,fiber:8.9,iron:8.8,calcium:46,b12:0,omega3:0,zinc:7.8,category:"seeds"},
+    {name:"Mandeln",calories:579,protein:21.2,carbs:21.6,fat:49.9,fiber:12.5,iron:3.7,calcium:269,b12:0,omega3:0,zinc:3.1,category:"nuts"},
+    {name:"Walnüsse",calories:654,protein:15.2,carbs:13.7,fat:65.2,fiber:6.7,iron:2.9,calcium:98,b12:0,omega3:2570,zinc:3.1,category:"nuts"},
+    {name:"Spinat (roh)",calories:23,protein:2.9,carbs:3.6,fat:0.4,fiber:2.2,iron:2.7,calcium:99,b12:0,omega3:0,zinc:0.5,category:"vegetable"},
+    {name:"Brokkoli",calories:34,protein:2.8,carbs:7.0,fat:0.4,fiber:2.6,iron:0.7,calcium:47,b12:0,omega3:0,zinc:0.4,category:"vegetable"},
+    {name:"Grünkohl",calories:49,protein:4.3,carbs:8.8,fat:0.9,fiber:3.6,iron:1.5,calcium:150,b12:0,omega3:180,zinc:0.6,category:"vegetable"},
+    {name:"Karotten",calories:41,protein:0.9,carbs:9.6,fat:0.2,fiber:2.8,iron:0.3,calcium:33,b12:0,omega3:0,zinc:0.2,category:"vegetable"},
+    {name:"Kartoffeln",calories:77,protein:2.0,carbs:17.5,fat:0.1,fiber:2.1,iron:0.8,calcium:12,b12:0,omega3:0,zinc:0.3,category:"vegetable"},
+    {name:"Süßkartoffel (gekocht)",calories:90,protein:2.0,carbs:20.7,fat:0.2,fiber:3.3,iron:0.6,calcium:38,b12:0,omega3:0,zinc:0.3,category:"vegetable"},
+    {name:"Avocado",calories:160,protein:2.0,carbs:8.5,fat:14.7,fiber:6.7,iron:0.6,calcium:12,b12:0,omega3:110,zinc:0.6,category:"vegetable"},
+    {name:"Champignons",calories:22,protein:3.1,carbs:3.3,fat:0.3,fiber:1.0,iron:0.5,calcium:3,b12:0.04,omega3:0,zinc:0.5,category:"vegetable"},
+    {name:"Äpfel",calories:52,protein:0.3,carbs:13.8,fat:0.2,fiber:2.4,iron:0.1,calcium:6,b12:0,omega3:0,zinc:0.0,category:"fruit"},
+    {name:"Banane",calories:89,protein:1.1,carbs:22.8,fat:0.3,fiber:2.6,iron:0.3,calcium:5,b12:0,omega3:0,zinc:0.2,category:"fruit"},
+    {name:"Beeren (gemischt)",calories:57,protein:0.7,carbs:14.5,fat:0.3,fiber:2.0,iron:0.6,calcium:16,b12:0,omega3:0,zinc:0.1,category:"fruit"},
+    {name:"Sojamilch (angereichert)",calories:54,protein:3.3,carbs:6.3,fat:1.8,fiber:0.6,iron:0.6,calcium:120,b12:0.38,omega3:0,zinc:0.3,category:"alternative"},
+    {name:"Hafermilch",calories:47,protein:1.0,carbs:7.6,fat:1.5,fiber:0.8,iron:0.3,calcium:120,b12:0.38,omega3:0,zinc:0.3,category:"alternative"},
+    {name:"Sojajoghurt",calories:61,protein:4.6,carbs:2.3,fat:3.5,fiber:1.2,iron:0.5,calcium:120,b12:0.25,omega3:0,zinc:0.4,category:"alternative"},
+    {name:"Nährhefe",calories:325,protein:50.0,carbs:38.0,fat:5.0,fiber:27.0,iron:2.1,calcium:30,b12:8.0,omega3:0,zinc:7.8,category:"supplement"},
+    {name:"Olivenöl",calories:884,protein:0,carbs:0,fat:100.0,fiber:0,iron:0.4,calcium:1,b12:0,omega3:761,zinc:0,category:"oil"},
+    {name:"Leinöl",calories:884,protein:0,carbs:0,fat:100.0,fiber:0,iron:0,calcium:0,b12:0,omega3:53304,zinc:0,category:"oil"},
+    {name:"Hummus",calories:166,protein:7.9,carbs:14.3,fat:9.6,fiber:6.0,iron:2.4,calcium:38,b12:0,omega3:0,zinc:1.8,category:"spread"},
+    {name:"Dunkle Schokolade (70%)",calories:598,protein:7.8,carbs:45.8,fat:42.6,fiber:10.9,iron:11.9,calcium:73,b12:0,omega3:0,zinc:3.3,category:"snack"},
+    {name:"Erdnussmus",calories:588,protein:25.8,carbs:16.1,fat:49.2,fiber:8.5,iron:2.4,calcium:92,b12:0,omega3:0,zinc:3.3,category:"nut_butter"},
+    {name:"Hanfsamen",calories:553,protein:31.6,carbs:8.7,fat:48.8,fiber:4.0,iron:7.9,calcium:70,b12:0,omega3:8670,zinc:7.9,category:"seeds"},
+];
+
+function init() { loadData(); updateCurrentDate(); loadSettings(); updateDashboard(); updateMealLog(); updateDetailedMicronutrients(); updateStats(); displayFoodDatabase(); updateSidebarWidget(); }
+
+function loadData() { try { const s=localStorage.getItem('veganNutritionData'); if(s){window.appData=JSON.parse(s);if(!Array.isArray(window.appData.customFoods))window.appData.customFoods=[];} }catch(e){} }
+function saveData() { try{localStorage.setItem('veganNutritionData',JSON.stringify(window.appData));}catch(e){} if(window.saveToFirestore)window.saveToFirestore(); }
+
+function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('sidebarOverlay').classList.toggle('open'); }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('open'); }
+
+window.showPage = function(name) {
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+    const p=document.getElementById('page-'+name); if(p)p.classList.add('active');
+    const n=document.getElementById('nav-'+name); if(n)n.classList.add('active');
+    if(name==='stats')updateStats(); if(name==='myfoods')displayCustomFoods();
+    if(name==='micro')updateDetailedMicronutrients(); if(name==='settings')loadSettings();
+    closeSidebar(); window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function switchAuthTab(tab) {
+    document.getElementById('loginTab').classList.toggle('active',tab==='login');
+    document.getElementById('registerTab').classList.toggle('active',tab==='register');
+    document.getElementById('authSubmitBtn').textContent=tab==='login'?'Anmelden':'Registrieren';
+    document.getElementById('authError').textContent='';
+}
+
+function changeDate(days) {
+    const d=new Date(window.appData.currentDate); d.setDate(d.getDate()+days);
+    window.appData.currentDate=d.toISOString().split('T')[0];
+    updateCurrentDate(); updateDashboard(); updateMealLog(); updateDetailedMicronutrients(); updateSidebarWidget();
+}
+
+function updateCurrentDate() {
+    const d=new Date(window.appData.currentDate);
+    const str=d.toLocaleDateString('de-AT',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+    const e1=document.getElementById('currentDate'), e2=document.getElementById('currentDate2');
+    if(e1)e1.textContent=str; if(e2)e2.textContent=str;
+}
+
+function getTotalsForDate(dateKey) {
+    const dayLog=window.appData.foodLog[dateKey]||{breakfast:[],lunch:[],dinner:[],snacks:[]};
+    const totals={calories:0,protein:0,carbs:0,fat:0,fiber:0,iron:0,calcium:0,b12:0,omega3:0,zinc:0};
+    const sources={iron:[],calcium:[],b12:[],omega3:[]};
+    ['breakfast','lunch','dinner','snacks'].forEach(meal=>{
+        (dayLog[meal]||[]).forEach(item=>{
+            const m=item.amount/100;
+            Object.keys(totals).forEach(k=>{totals[k]+=(item.food[k]||0)*m;});
+            const iv=(item.food.iron||0)*m,cv=(item.food.calcium||0)*m,bv=(item.food.b12||0)*m,ov=(item.food.omega3||0)*m;
+            if(iv>0.5)sources.iron.push({name:item.food.name,amount:iv});
+            if(cv>10)sources.calcium.push({name:item.food.name,amount:cv});
+            if(bv>0.01)sources.b12.push({name:item.food.name,amount:bv});
+            if(ov>10)sources.omega3.push({name:item.food.name,amount:ov});
+        });
+    });
+    return{totals,sources};
+}
+
+window.updateDashboard = function() {
+    const{totals,sources}=getTotalsForDate(window.appData.currentDate);
+    const s=window.appData.settings;
+    const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
+    set('caloriesValue',Math.round(totals.calories)); set('proteinValue',Math.round(totals.protein));
+    set('carbsValue',Math.round(totals.carbs)); set('fatValue',Math.round(totals.fat));
+    set('caloriesTarget',s.dailyCalories); set('proteinTarget',s.dailyProtein);
+    set('carbsTarget',s.dailyCarbs); set('fatTarget',s.dailyFat);
+    drawMacroPie(totals.protein,totals.carbs,totals.fat);
+    set('b12Value',totals.b12.toFixed(1)); set('ironValue',totals.iron.toFixed(1));
+    set('calciumValue',Math.round(totals.calcium)); set('omega3Value',Math.round(totals.omega3));
+    setMicro('b12Fill','micro-b12',totals.b12,4); setMicro('ironFill','micro-iron',totals.iron,14);
+    setMicro('calciumFill','micro-calcium',totals.calcium,1000); setMicro('omega3Fill','micro-omega3',totals.omega3,250);
+    showSources('b12Sources',sources.b12,'µg'); showSources('ironSources',sources.iron,'mg');
+    showSources('calciumSources',sources.calcium,'mg'); showSources('omega3Sources',sources.omega3,'mg');
+}
+
+window.updateSidebarWidget = function() {
+    const{totals}=getTotalsForDate(window.appData.currentDate);
+    const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
+    set('sw-b12',totals.b12.toFixed(1)+' µg'); set('sw-iron',totals.iron.toFixed(1)+' mg');
+    set('sw-kcal',Math.round(totals.calories)+' kcal');
+    const b12p=Math.min(totals.b12/4*100,100), ironp=Math.min(totals.iron/14*100,100);
+    const b12el=document.getElementById('sw-b12-bar'), ironel=document.getElementById('sw-iron-bar');
+    if(b12el){b12el.style.width=b12p+'%';b12el.className='sidebar-micro-fill'+(b12p<50?' crit':b12p<80?' warn':'');}
+    if(ironel){ironel.style.width=ironp+'%';ironel.className='sidebar-micro-fill'+(ironp<50?' crit':ironp<80?' warn':'');}
+}
+
+function drawMacroPie(protein,carbs,fat) {
+    const canvas=document.getElementById('macroPlate'); if(!canvas)return;
+    const ctx=canvas.getContext('2d'),cx=65,cy=65,r=58,innerR=36;
+    ctx.clearRect(0,0,130,130);
+    const values=[protein*4,carbs*4,fat*9],kcalTotal=values.reduce((a,b)=>a+b,0);
+    ctx.beginPath();ctx.arc(cx,cy,r+4,0,Math.PI*2);ctx.fillStyle='#e8ece9';ctx.fill();
+    if(kcalTotal===0){ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fillStyle='#f5f7f5';ctx.fill();}
+    else{let sa=-Math.PI/2;['#9BAA9E','#C4B99A','#B5C2B9'].forEach((c,i)=>{if(values[i]<=0)return;const sl=values[i]/kcalTotal*Math.PI*2;ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,sa,sa+sl);ctx.closePath();ctx.fillStyle=c;ctx.fill();sa+=sl;});}
+    ctx.beginPath();ctx.arc(cx,cy,innerR,0,Math.PI*2);ctx.fillStyle='white';ctx.fill();
+}
+
+function setMicro(barId,itemId,val,target) {
+    const pct=Math.min(val/target*100,100);
+    const bar=document.getElementById(barId);if(bar)bar.style.width=pct+'%';
+    const el=document.getElementById(itemId);if(el){el.classList.remove('warning','critical');if(pct<50)el.classList.add('critical');else if(pct<80)el.classList.add('warning');}
+}
+
+function showSources(id,sources,unit) {
+    const el=document.getElementById(id);if(!el)return;
+    if(!sources.length){el.innerHTML='<small style="color:#bbb">Keine Quellen heute</small>';return;}
+    el.innerHTML=sources.sort((a,b)=>b.amount-a.amount).slice(0,3).map(s=>`<div class="source-item"><span>${s.name}</span><span class="source-amount">${s.amount.toFixed(1)} ${unit}</span></div>`).join('');
+}
+
+function displayFoodDatabase() {
+    document.getElementById('foodCount').textContent=veganFoodDatabase.length;
+    updateCustomFoodCount();
+    renderFoodList([...veganFoodDatabase,...(window.appData.customFoods||[])],false);
+}
+
+function setSearchMode(mode) {
+    searchMode=mode;
+    document.getElementById('localSearchBtn').classList.toggle('active',mode==='local');
+    document.getElementById('onlineSearchBtn').classList.toggle('active',mode==='online');
+    document.getElementById('onlineSearchInfo').style.display=mode==='online'?'block':'none';
+    document.getElementById('foodSearch').value='';
+    document.getElementById('foodResults').innerHTML='';
+}
+
+async function searchFood() {
+    const term=document.getElementById('foodSearch').value.trim();
+    if(!term){displayFoodDatabase();return;}
+    if(searchMode==='local'){
+        const lower=term.toLowerCase();
+        renderFoodList([...veganFoodDatabase,...(window.appData.customFoods||[])].filter(f=>f.name.toLowerCase().includes(lower)),false);
+    } else { await searchOnline(term); }
+}
+
+async function searchOnline(term) {
+    document.getElementById('foodResults').innerHTML='<div class="loading-text">&#9203; Suche läuft…</div>';
+    try {
+        const engTerm=translateToEnglish(term);
+        const r=await fetch(`https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(engTerm)}&pageSize=20&api_key=DEMO_KEY&dataType=Foundation,SR%20Legacy`);
+        const data=await r.json();
+        if(!data.foods?.length){document.getElementById('foodResults').innerHTML='<div class="empty-state"><div class="empty-state-icon">&#128269;</div><p>Keine Ergebnisse</p></div>';return;}
+        renderFoodList(data.foods.map(convertUSDA).filter(Boolean),true);
+    } catch{document.getElementById('foodResults').innerHTML='<div class="empty-state"><div class="empty-state-icon">&#9888;</div><p>Fehler bei der Suche</p></div>';}
+}
+
+function convertUSDA(p) {
+    if(!p.foodNutrients)return null;
+    const get=(id)=>{const n=p.foodNutrients.find(n=>n.nutrientId===id||n.nutrientNumber===String(id));return n?(n.value||n.amount||0):0;};
+    return{name:p.description,calories:get(1008),protein:get(1003),carbs:get(1005),fat:get(1004),fiber:get(1079),iron:get(1089),calcium:get(1087),b12:get(1178),omega3:get(1404),zinc:get(1095),category:'custom',source:'usda',dateAdded:new Date().toISOString().split('T')[0]};
+}
+
+let foodCache={};
+function renderFoodList(foods,isOnline) {
+    foodCache={};
+    const container=document.getElementById('foodResults');
+    if(!foods?.length){container.innerHTML='<div class="empty-state"><div class="empty-state-icon">&#128269;</div><p>Keine Ergebnisse</p></div>';return;}
+    container.innerHTML=foods.map((food,idx)=>{
+        const id='food_'+idx; foodCache[id]=food;
+        const badge=isOnline?'<span class="online-result-badge">&#127760;</span>':'';
+        const src=food.source?'<span class="source-badge">Meine DB</span>':'';
+        return`<div class="food-item"><div class="food-name">${food.name}${badge}${src}</div><div class="food-nutrients">${Math.round(food.calories)} kcal | P: ${food.protein.toFixed(1)}g | K: ${food.carbs.toFixed(1)}g | F: ${food.fat.toFixed(1)}g / 100g</div><div class="add-food-row">${isOnline&&!window.appData.customFoods.some(f=>f.name===food.name)?`<button class="preview-btn" data-foodid="${id}" onclick="handlePreview(this)">&#128065; Info</button>`:''}<input type="number" id="amt_${id}" value="100" min="1" step="10" inputmode="numeric"><span style="font-size:0.82em;color:#666">g</span><select id="meal_${id}"><option value="breakfast">Frühstück</option><option value="lunch">Mittag</option><option value="dinner">Abend</option><option value="snacks">Snacks</option></select><button class="add-btn" data-foodid="${id}" onclick="handleAddFood(this)">+</button></div></div>`;
+    }).join('');
+}
+
+function handlePreview(btn){const food=foodCache[btn.dataset.foodid];if(food)showPreviewModal(food);}
+
+function handleAddFood(btn) {
+    const id=btn.dataset.foodid,food=foodCache[id];if(!food)return;
+    const amount=parseInt(document.getElementById('amt_'+id).value)||100;
+    const meal=document.getElementById('meal_'+id).value;
+    const dateKey=window.appData.currentDate;
+    if(!window.appData.foodLog[dateKey])window.appData.foodLog[dateKey]={breakfast:[],lunch:[],dinner:[],snacks:[]};
+    window.appData.foodLog[dateKey][meal].push({food,amount,timestamp:new Date().toISOString()});
+    saveData();updateDashboard();updateMealLog();updateSidebarWidget();
+    btn.textContent='✓';btn.style.background='#6B7C70';
+    setTimeout(()=>{btn.textContent='+';btn.style.background='#8A9A8E';},1200);
+}
+
+function showPreviewModal(food) {
+    previewFood=food;document.getElementById('previewTitle').textContent=food.name;
+    document.getElementById('previewContent').innerHTML=`<div>${[['Kalorien',Math.round(food.calories)+' kcal'],['Protein',food.protein.toFixed(1)+' g'],['Kohlenhydrate',food.carbs.toFixed(1)+' g'],['Fett',food.fat.toFixed(1)+' g'],['Ballaststoffe',food.fiber.toFixed(1)+' g'],['Eisen',food.iron.toFixed(1)+' mg'],['Calcium',Math.round(food.calcium)+' mg'],['Vitamin B12',food.b12.toFixed(2)+' µg'],['Omega-3',Math.round(food.omega3)+' mg'],['Zink',food.zinc.toFixed(1)+' mg']].map(([l,v])=>`<div class="nutrient-row"><span class="nutrient-label">${l}</span><span class="nutrient-value">${v}</span></div>`).join('')}</div>`;
+    document.getElementById('previewModal').classList.add('active');
+}
+function closePreviewModal(){document.getElementById('previewModal').classList.remove('active');previewFood=null;}
+function confirmAddFood(){
+    if(!previewFood)return;
+    if(window.appData.customFoods.some(f=>f.name===previewFood.name)){alert('Bereits in deiner Datenbank!');closePreviewModal();return;}
+    window.appData.customFoods.push(previewFood);saveData();alert('Hinzugefügt!');closePreviewModal();updateCustomFoodCount();
+}
+
+window.updateMealLog = function() {
+    const dateKey=window.appData.currentDate;
+    const dayLog=window.appData.foodLog[dateKey]||{breakfast:[],lunch:[],dinner:[],snacks:[]};
+    const names={breakfast:'🌅 Frühstück',lunch:'☀️ Mittag',dinner:'🌙 Abend',snacks:'🍎 Snacks'};
+    document.getElementById('mealLog').innerHTML=['breakfast','lunch','dinner','snacks'].map(mk=>{
+        const meals=dayLog[mk]||[];let kcal=0,prot=0;
+        meals.forEach(i=>{const m=i.amount/100;kcal+=i.food.calories*m;prot+=i.food.protein*m;});
+        return`<div class="meal-section"><div class="meal-header"><span class="meal-title">${names[mk]}</span><span class="meal-total">${Math.round(kcal)} kcal | ${Math.round(prot)}g P</span></div>${!meals.length?'<p style="color:#bbb;text-align:center;font-size:0.88em">Noch keine Einträge</p>':meals.map((item,idx)=>`<div class="logged-food"><div class="logged-food-info"><strong style="font-size:0.92em">${item.food.name}</strong> — ${item.amount}g<br><small style="color:#666">${Math.round(item.food.calories*item.amount/100)} kcal | P:${Math.round(item.food.protein*item.amount/100)}g</small></div><button class="remove-btn" data-meal="${mk}" data-idx="${idx}" onclick="removeFood(this)">×</button></div>`).join('')}</div>`;
+    }).join('');
+}
+
+function removeFood(btn){const meal=btn.dataset.meal,idx=parseInt(btn.dataset.idx);window.appData.foodLog[window.appData.currentDate][meal].splice(idx,1);saveData();updateDashboard();updateMealLog();updateSidebarWidget();}
+
+function updateCustomFoodCount(){const el=document.getElementById('customFoodCount');if(el)el.textContent=(window.appData.customFoods||[]).length;}
+
+function displayCustomFoods(){
+    const foods=window.appData.customFoods||[],container=document.getElementById('customFoodsList');
+    if(!foods.length){container.innerHTML='<div class="empty-state"><div class="empty-state-icon">📚</div><p>Noch keine eigenen Lebensmittel</p></div>';return;}
+    container.innerHTML=foods.map((f,i)=>`<div class="custom-food-card"><div class="custom-food-header"><span class="custom-food-name">${f.name}</span>${f.source?`<span class="source-badge">${f.source==='usda'?'🌐':'✏️'}</span>`:''}</div><div class="custom-food-nutrients">${Math.round(f.calories)} kcal | P: ${f.protein.toFixed(1)}g | K: ${f.carbs.toFixed(1)}g | F: ${f.fat.toFixed(1)}g</div><div class="custom-food-actions"><button class="action-btn-small edit" data-idx="${i}" onclick="editCustomFood(this)">✏️ Bearbeiten</button><button class="action-btn-small delete" data-idx="${i}" onclick="deleteCustomFood(this)">🗑️ Löschen</button></div></div>`).join('');
+}
+
+function deleteCustomFood(btn){const i=parseInt(btn.dataset.idx);if(confirm(`"${window.appData.customFoods[i].name}" löschen?`)){window.appData.customFoods.splice(i,1);saveData();displayCustomFoods();updateCustomFoodCount();}}
+
+function editCustomFood(btn){
+    const i=parseInt(btn.dataset.idx);editingFoodIndex=i;const f=window.appData.customFoods[i];
+    document.getElementById('editFoodTitle').textContent='Bearbeiten';
+    document.getElementById('editFoodName').value=f.name;
+    ['Calories','Protein','Carbs','Fat','Fiber','Iron','Calcium','B12','Omega3','Zinc'].forEach(k=>{const el=document.getElementById('edit'+k);if(el)el.value=f[k.toLowerCase()]||0;});
+    document.getElementById('editCategory').value=f.category||'custom';
+    document.getElementById('editFoodModal').classList.add('active');
+}
+
+function showCreateFoodModal(){editingFoodIndex=null;document.getElementById('editFoodTitle').textContent='Neues Lebensmittel';document.getElementById('editFoodName').value='';['editCalories','editProtein','editCarbs','editFat','editFiber','editIron','editCalcium','editB12','editOmega3','editZinc'].forEach(id=>{document.getElementById(id).value=0;});document.getElementById('editFoodModal').classList.add('active');}
+function closeEditFoodModal(){document.getElementById('editFoodModal').classList.remove('active');editingFoodIndex=null;}
+
+function saveEditedFood(){
+    const name=document.getElementById('editFoodName').value.trim();if(!name){alert('Bitte Namen eingeben!');return;}
+    const g=(id)=>parseFloat(document.getElementById(id)?.value)||0;
+    const food={name,category:document.getElementById('editCategory').value,calories:g('editCalories'),protein:g('editProtein'),carbs:g('editCarbs'),fat:g('editFat'),fiber:g('editFiber'),iron:g('editIron'),calcium:g('editCalcium'),b12:g('editB12'),omega3:g('editOmega3'),zinc:g('editZinc'),source:'manual',dateAdded:new Date().toISOString().split('T')[0]};
+    if(editingFoodIndex!==null)window.appData.customFoods[editingFoodIndex]=food;
+    else window.appData.customFoods.push(food);
+    saveData();closeEditFoodModal();displayCustomFoods();updateCustomFoodCount();alert('Gespeichert!');
+}
+
+function updateDetailedMicronutrients(){
+    const{totals}=getTotalsForDate(window.appData.currentDate);
+    const micros=[{name:'Vitamin B12',val:totals.b12,unit:'µg',target:4,info:'Für Nervensystem und Blut'},{name:'Eisen',val:totals.iron,unit:'mg',target:14,info:'Für Sauerstofftransport'},{name:'Calcium',val:totals.calcium,unit:'mg',target:1000,info:'Für Knochen und Zähne'},{name:'Omega-3',val:totals.omega3,unit:'mg',target:250,info:'Für Herz und Gehirn'},{name:'Zink',val:totals.zinc,unit:'mg',target:10,info:'Für Immunsystem'},{name:'Ballaststoffe',val:totals.fiber,unit:'g',target:30,info:'Für Verdauung'}];
+    document.getElementById('detailedMicronutrients').innerHTML=micros.map(m=>{const pct=Math.min(m.val/m.target*100,100),status=pct<50?'critical':pct<80?'warning':'';return`<div class="micronutrient-item ${status}"><div class="micronutrient-header"><span class="micronutrient-name">${m.name}</span><span class="micronutrient-value">${m.val.toFixed(1)} ${m.unit}</span></div><div class="micronutrient-bar"><div class="micronutrient-fill" style="width:${pct}%"></div></div><div class="micronutrient-target">Ziel: ${m.target} ${m.unit} (${Math.round(pct)}%) — ${m.info}</div></div>`;}).join('');
+}
+
+function updateStats(){
+    let sum={calories:0,protein:0,b12:0,iron:0,days:0};
+    for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);const key=d.toISOString().split('T')[0];const{totals}=getTotalsForDate(key);if(totals.calories>0){sum.calories+=totals.calories;sum.protein+=totals.protein;sum.b12+=totals.b12;sum.iron+=totals.iron;sum.days++;}}
+    const avg=sum.days||1;
+    const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
+    set('avgCalories',Math.round(sum.calories/avg));set('avgProtein',Math.round(sum.protein/avg));set('avgB12',(sum.b12/avg).toFixed(1));set('avgIron',(sum.iron/avg).toFixed(1));
+    const ach=[{days:1,title:'🌱 Erste Schritte',desc:'Ersten Tag getrackt!'},{days:7,title:'🔥 Eine Woche',desc:'7 Tage am Ball!'},{days:30,title:'💪 Ein Monat',desc:'30 Tage Tracking!'}];
+    const achEl=document.getElementById('achievements');
+    if(achEl)achEl.innerHTML=ach.filter(a=>sum.days>=a.days).map(a=>`<div class="stat-card" style="text-align:left;margin-bottom:10px"><div style="font-size:1.1em;margin-bottom:4px">${a.title}</div><div style="opacity:.9;font-size:.88em">${a.desc}</div></div>`).join('')||'<p style="text-align:center;color:#bbb;padding:18px">Tracke deine erste Mahlzeit!</p>';
+}
+
+window.loadSettings = function(){const s=window.appData.settings;const set=(id,val)=>{const el=document.getElementById(id);if(el)el.value=val;};set('dailyCalories',s.dailyCalories);set('dailyProtein',s.dailyProtein);set('dailyCarbs',s.dailyCarbs);set('dailyFat',s.dailyFat);}
+
+function saveSettings(){const g=(id)=>parseInt(document.getElementById(id)?.value)||0;window.appData.settings={dailyCalories:g('dailyCalories')||2000,dailyProtein:g('dailyProtein')||60,dailyCarbs:g('dailyCarbs')||250,dailyFat:g('dailyFat')||65};saveData();updateDashboard();alert('Gespeichert!');}
+function clearAllData(){if(confirm('Alle Daten löschen?')){if(confirm('Wirklich sicher?')){localStorage.removeItem('veganNutritionData');location.reload();}}}
+
+window.toggleSidebar=toggleSidebar;window.closeSidebar=closeSidebar;window.switchAuthTab=switchAuthTab;window.changeDate=changeDate;window.setSearchMode=setSearchMode;window.searchFood=searchFood;window.handlePreview=handlePreview;window.handleAddFood=handleAddFood;window.closePreviewModal=closePreviewModal;window.confirmAddFood=confirmAddFood;window.removeFood=removeFood;window.displayCustomFoods=displayCustomFoods;window.deleteCustomFood=deleteCustomFood;window.editCustomFood=editCustomFood;window.showCreateFoodModal=showCreateFoodModal;window.closeEditFoodModal=closeEditFoodModal;window.saveEditedFood=saveEditedFood;window.saveSettings=saveSettings;window.clearAllData=clearAllData;window.updateMealLog=updateMealLog;window.updateDashboard=updateDashboard;window.updateSidebarWidget=updateSidebarWidget;window.loadSettings=window.loadSettings;
+
+window.onload=init;
+</script>
+</body>
+</html>
